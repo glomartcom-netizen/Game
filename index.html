@@ -1,1 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DMX ELITE - V26.9.7 PERFECT STABLE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script type="module">
+        import { createAppKit } from 'https://esm.sh/@reown/appkit?bundle'
+        import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'
+        import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'
+
+        const projectId = '059cc242b0cc96ac9665c598b76ddc7b';
+        const modal = createAppKit({
+          adapters: [new Ethers5Adapter()],
+          networks: [bsc],
+          metadata: { name: 'DimeX Pro', url: window.location.origin, icons: ['https://i.ibb.co/HpqwGFqt/logo.png'] },
+          projectId,
+          features: { analytics: true }
+        });
+        window.appKitModal = modal;
+
+        modal.subscribeState((state) => { if(state?.isConnected && window.syncWallet) window.syncWallet(); });
+    </script>
+
+    <style>
+        :root { --primary: #6366f1; --dark: #020617; }
+        body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+        .master-card { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 1.2rem; }
+        .btn-master { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); font-weight: 800; transition: 0.2s; text-transform: uppercase; border-radius: 0.75rem; }
+        .game-screen { display: none; }
+        #winOverlay { position: fixed; inset: 0; pointer-events: none; opacity: 0; z-index: 50; background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%); }
+        .slot-window { display: flex; gap: 5px; justify-content: center; background: #000; padding: 10px; border-radius: 1rem; height: 100px; border: 1px solid #1e293b; overflow: hidden; }
+        .reel-hd { width: 60px; height: 80px; overflow: hidden; position: relative; background: #0a0a0a; border-radius: 8px; }
+        .symbol-reel { position: absolute; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        #crashContainer { position: relative; overflow: hidden; height: 280px; background: rgba(0,0,0,0.5); border-radius: 1.5rem; border: 1px solid #1e293b; }
+        #rocket { position: absolute; left: 10px; bottom: 10px; z-index: 20; font-size: 3.5rem; filter: drop-shadow(0 0 10px #6366f1); }
+    </style>
+</head>
+<body class="p-2 md:p-4">
+    <div id="winOverlay"></div>
+
+    <header class="max-w-7xl mx-auto mb-4 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-black italic text-white">DMX <span class="text-indigo-500">V26.9.7</span></h1>
+            <p class="text-[9px] text-slate-500 font-bold uppercase"><span id="walletAddr">OFFLINE</span> | <span id="liveRate">RATE: --</span></p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="toggleAmbience()" id="muteBtn" class="master-card px-3 py-1 text-[10px]">🔈 OFF</button>
+            <div class="master-card px-4 py-1 text-right">
+                <div id="dmxBalanceDisp" class="text-xs font-bold text-indigo-400">500.00 DMX</div>
+            </div>
+            <button onclick="connectWallet()" id="walletBtn" class="btn-master px-4 py-2 text-[10px]">CONNECT</button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4 h-[80vh]">
+        <div class="lg:col-span-3 flex flex-col gap-4">
+            <section class="master-card p-4">
+                <div class="flex justify-between text-[10px] font-bold mb-2"><span>STAKE</span><span id="betValue">10 DMX</span></div>
+                <input id="betAmount" type="range" min="1" max="1000" value="10" oninput="updateUI()" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer mb-6">
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="handleDeposit()" class="bg-green-600/20 border border-green-500/50 p-2 rounded-lg text-[10px] font-bold">DEPOSIT</button>
+                    <button onclick="handleWithdraw()" class="bg-indigo-600/20 border border-indigo-500/50 p-2 rounded-lg text-[10px] font-bold">WITHDRAW</button>
+                </div>
+                <div id="refContainer" class="mt-4 p-2 bg-black/40 rounded border border-white/5 hidden">
+                    <p class="text-[8px] text-slate-500 mb-1">YOUR REFERRAL LINK</p>
+                    <div id="refBox" class="text-[9px] text-indigo-400 font-mono break-all">---</div>
+                </div>
+            </section>
+            <section class="master-card p-4 flex-1 overflow-hidden flex flex-col">
+                <p class="text-[10px] font-bold text-indigo-500 mb-2">LIVE ACTIVITY</p>
+                <div id="liveFeed" class="flex-1 overflow-y-auto space-y-1 text-[9px]"></div>
+            </section>
+        </div>
+
+        <div class="lg:col-span-9 overflow-y-auto">
+            <div id="lobby" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div onclick="openGame('coin')" class="master-card p-6 text-center cursor-pointer hover:border-indigo-500 transition-all"><div class="text-5xl mb-2">🪙</div><p class="text-xs font-bold">3D COIN FLIP</p></div>
+                <div onclick="openGame('dice')" class="master-card p-6 text-center cursor-pointer hover:border-indigo-500 transition-all"><div class="text-5xl mb-2">🎲</div><p class="text-xs font-bold">3D DICE ROLL</p></div>
+                <div onclick="openGame('crash')" class="master-card p-6 text-center cursor-pointer hover:border-indigo-500 transition-all"><div class="text-5xl mb-2">🚀</div><p class="text-xs font-bold">TURBO CRASH</p></div>
+                <div onclick="openGame('slot')" class="master-card p-6 text-center cursor-pointer hover:border-indigo-500 transition-all"><div class="text-5xl mb-2">🎰</div><p class="text-xs font-bold">ELITE SLOTS</p></div>
+                <div onclick="openGame('battle')" class="master-card p-6 text-center cursor-pointer hover:border-indigo-500 transition-all"><div class="text-5xl mb-2">⚔️</div><p class="text-xs font-bold">BATTLE ARENA</p></div>
+            </div>
+
+            <div id="coinGame" class="game-screen master-card p-8 flex flex-col items-center">
+                <button onclick="backToLobby()" class="self-start text-[10px] font-bold text-indigo-400">← LOBBY</button>
+                <div id="coinCanvas" class="w-64 h-64 mt-4"></div>
+                <button onclick="playGame('coin')" class="btn-master w-full max-w-sm py-4 mt-8">FLIP COIN</button>
+            </div>
+
+            <div id="diceGame" class="game-screen master-card p-8 flex flex-col items-center">
+                <button onclick="backToLobby()" class="self-start text-[10px] font-bold text-indigo-400">← LOBBY</button>
+                <div id="diceCanvas" class="w-64 h-64 mt-4"></div>
+                <div id="diceResult" class="text-3xl font-black mt-4 text-indigo-400">-</div>
+                <button onclick="playGame('dice')" class="btn-master w-full max-w-sm py-4 mt-8">ROLL DICE</button>
+            </div>
+
+            <div id="crashGame" class="game-screen master-card p-6 flex flex-col">
+                <button onclick="backToLobby()" class="self-start text-[10px] font-bold text-indigo-400 mb-4">← LOBBY</button>
+                <div id="crashContainer">
+                    <h3 id="crashMult" class="text-7xl font-black text-indigo-500 absolute top-8 left-8 z-10">1.00x</h3>
+                    <div id="rocket">🚀</div>
+                </div>
+                <button onclick="playGame('crash')" id="crashBtn" class="btn-master w-full py-5 mt-4">LAUNCH ROCKET</button>
+                <button onclick="cashoutCrash()" id="cashoutBtn" class="hidden w-full py-5 bg-green-600 rounded-xl font-black mt-4 uppercase">Cashout</button>
+            </div>
+
+            <div id="slotGame" class="game-screen master-card p-8 flex flex-col items-center">
+                <button onclick="backToLobby()" class="self-start text-[10px] font-bold text-indigo-400">← LOBBY</button>
+                <div id="slotDisplay" class="slot-window my-8 w-full max-w-sm">
+                    <div class="reel-hd"><div id="reel1" class="symbol-reel text-4xl">🎰<br>💎<br>🔥<br>💰</div></div>
+                    <div class="reel-hd"><div id="reel2" class="symbol-reel text-4xl">💎<br>🎰<br>💰<br>🔥</div></div>
+                    <div class="reel-hd"><div id="reel3" class="symbol-reel text-4xl">🔥<br>💰<br>💎<br>🎰</div></div>
+                </div>
+                <button onclick="playGame('slot')" class="btn-master w-full max-w-sm py-5">SPIN</button>
+            </div>
+
+            <div id="battleGame" class="game-screen master-card p-8 flex flex-col items-center">
+                <button onclick="backToLobby()" class="self-start text-[10px] font-bold text-indigo-400">← LOBBY</button>
+                <div class="flex justify-around items-center w-full h-48 bg-black/40 rounded-2xl my-8 text-8xl">
+                    <div id="p1">⚔️</div><div class="text-2xl opacity-20">VS</div><div id="p2">🛡️</div>
+                </div>
+                <button onclick="playGame('battle')" class="btn-master w-full max-w-sm py-4">FIGHT</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let dmxBalance = 500, userWallet = null, isPlaying = false, ambienceOn = false;
+        let coinMesh, diceMesh, crashInt, crashVal, currentRate = 0.01;
+        let crashCashoutLocked = false;
+
+        const sounds = {
+            click: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3'] }),
+            win: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-casino-bling-notification-229.mp3'] }),
+            rocket: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-rocket-launcher-firing-1681.mp3'], loop: true }),
+            cracker: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-firecracker-bang-2794.mp3'] }),
+            lose: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3'] }),
+            spin: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-mechanical-spin-wheel-click-1139.mp3'], loop: true }),
+            boom: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-explosive-impact-boom-2580.mp3'] }),
+            fight: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-sword-strike-flesh-hit-2333.mp3'] }),
+            casino: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-casino-slot-machine-room-ambience-1982.mp3'], loop: true, volume: 0.15 })
+        };
+
+        async function connectWallet(){ await window.appKitModal.open(); }
+        window.syncWallet = async () => {
+            const provider = window.appKitModal.getWalletProvider();
+            if(!provider) return;
+            const ethersProvider = new ethers.BrowserProvider(provider);
+            const signer = await ethersProvider.getSigner();
+            userWallet = await signer.getAddress();
+            document.getElementById("walletAddr").innerText = userWallet.slice(0,6)+"..."+userWallet.slice(-4);
+            document.getElementById("refBox").innerText = window.location.origin + "?ref=" + userWallet;
+            document.getElementById("refContainer").classList.remove('hidden');
+            updateUI();
+        };
+
+        async function fetchLiveRate() {
+            try {
+                const res = await fetch('https://api.dexscreener.com/latest/dex/pairs/bsc/0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16');
+                const data = await res.json();
+                currentRate = parseFloat(data.pair.priceUsd) || 0.01;
+                document.getElementById('liveRate').innerText = `RATE: $${currentRate.toFixed(4)}`;
+            } catch(e) { document.getElementById('liveRate').innerText = "RATE: MANUAL"; }
+        }
+
+        function handleDeposit(){
+            const dmx = parseFloat(prompt("Enter DMX amount to deposit:"));
+            if(!dmx || dmx <= 0) return;
+            const payMode = prompt("Select Payment Mode:\n1 = DMX\n2 = USDT");
+            if(payMode === "2"){
+                const usdtAmount = (dmx * currentRate).toFixed(4);
+                addLog(`Waiting payment: ${usdtAmount} USDT for ${dmx} DMX`, "text-yellow-400");
+            }
+            dmxBalance += dmx; 
+            addLog(`Deposit successful: ${dmx} DMX`, "text-green-500"); 
+            updateUI();
+        }
+
+        function handleWithdraw(){
+            const amount = parseFloat(prompt("Enter DMX amount to withdraw:"));
+            if(amount > 0 && amount <= dmxBalance){ 
+                dmxBalance -= amount; 
+                addLog(`Withdrawal of ${amount} DMX processing`, "text-indigo-400"); 
+                updateUI(); 
+            } else {
+                alert("Invalid amount or insufficient balance.");
+            }
+        }
+
+        function init3D() {
+            const loader = new THREE.TextureLoader();
+            const setup = (id, mesh) => {
+                const sc = new THREE.Scene(); 
+                const re = new THREE.WebGLRenderer({alpha:true, antialias:true});
+                re.setSize(250, 250);
+                document.getElementById(id).appendChild(re.domElement);
+                sc.add(new THREE.AmbientLight(0xffffff, 1.5), mesh);
+                const ca = new THREE.PerspectiveCamera(45, 1, 0.1, 100); ca.position.z = 8;
+                const anim = () => { requestAnimationFrame(anim); if(!isPlaying) mesh.rotation.y += 0.01; re.render(sc, ca); };
+                anim();
+            };
+
+            const coinGeom = new THREE.CylinderGeometry(2.5, 2.5, 0.4, 64);
+            const coinMat = [
+                new THREE.MeshStandardMaterial({color: 0xffd700}),
+                new THREE.MeshStandardMaterial({map: loader.load('https://i.ibb.co/v6y8X9y/coin-front.png')}), 
+                new THREE.MeshStandardMaterial({map: loader.load('https://i.ibb.co/v6y8X9y/coin-front.png')})
+            ];
+            coinMesh = new THREE.Mesh(coinGeom, coinMat);
+            coinMesh.rotation.x = Math.PI / 2;
+
+            const diceGeom = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+            const diceTexs = [
+                'https://i.imgur.com/8XmU5Tz.png', 'https://i.imgur.com/G3P2Jp8.png',
+                'https://i.imgur.com/T09p1XG.png', 'https://i.imgur.com/zWzI8XG.png',
+                'https://i.imgur.com/f9O5YtA.png', 'https://i.imgur.com/vH9Z3Xg.png'
+            ].map(url => new THREE.MeshStandardMaterial({map: loader.load(url)}));
+            diceMesh = new THREE.Mesh(diceGeom, diceTexs);
+
+            setup('coinCanvas', coinMesh); setup('diceCanvas', diceMesh);
+        }
+
+        async function playGame(type) {
+            let bet = parseInt(document.getElementById('betAmount').value);
+            if(dmxBalance < bet || isPlaying) return;
+            isPlaying = true; dmxBalance -= bet; updateUI();
+            sounds.click.play();
+
+            if(type === 'coin') {
+                const win = Math.random() > 0.5;
+                gsap.to(coinMesh.rotation, { y: coinMesh.rotation.y + (win ? 20*Math.PI : 21*Math.PI), duration: 2, onComplete: () => finalize(win, 2, bet) });
+            } else if(type === 'dice') {
+                const res = Math.floor(Math.random() * 6) + 1;
+                document.getElementById("diceResult").innerText = "...";
+                addLog(`Dice Rolling...`, "text-indigo-400 font-bold");
+                gsap.to(diceMesh.rotation, { x: "+=" + (Math.PI*6), y: "+=" + (Math.PI*6), duration: 1.5, onComplete: () => {
+                    document.getElementById("diceResult").innerText = res;
+                    addLog(`Dice Result: ${res}`, "text-indigo-400 font-bold");
+                    finalize(res >= 4, 2, bet);
+                } });
+            } else if(type === 'crash') {
+                crashCashoutLocked = false;
+                document.getElementById('crashBtn').classList.add('hidden');
+                document.getElementById('cashoutBtn').classList.remove('hidden');
+                sounds.rocket.play();
+                let t = 0; const boom = (Math.random() * 5) + 1.2;
+                const container = document.getElementById("crashContainer");
+                gsap.to("#rocket", { duration: boom * 1.5, x: container.clientWidth * 0.55, y: -container.clientHeight * 0.55, ease: "power1.in" });
+                crashInt = setInterval(() => {
+                    t += 0.05; crashVal = Math.pow(Math.E, t/10);
+                    document.getElementById('crashMult').innerText = crashVal.toFixed(2) + "x";
+                    if(crashVal >= boom) {
+                        clearInterval(crashInt); sounds.rocket.stop(); sounds.boom.play();
+                        document.getElementById('cashoutBtn').classList.add('hidden');
+                        document.getElementById('crashBtn').classList.remove('hidden');
+                        gsap.set("#rocket", {x:0, y:0});
+                        finalize(false, 0, bet);
+                    }
+                }, 50);
+            } else if(type === 'slot') {
+                sounds.spin.play();
+                gsap.to("#reel1", {y: -160, duration: 0.4, repeat: 4, yoyo: true});
+                gsap.to("#reel2", {y: -160, duration: 0.5, repeat: 4, yoyo: true});
+                gsap.to("#reel3", {y: -160, duration: 0.6, repeat: 4, yoyo: true});
+                setTimeout(() => { sounds.spin.stop(); finalize(Math.random() > 0.8, 10, bet); }, 2000);
+            } else if(type === 'battle') {
+                sounds.fight.play();
+                gsap.to("#p1", { x: 40, repeat: 5, yoyo: true, duration: 0.1 });
+                gsap.to("#p2", { x: -40, repeat: 5, yoyo: true, duration: 0.1, onComplete: () => finalize(Math.random() > 0.5, 2, bet) });
+            }
+        }
+
+        function cashoutCrash() { 
+            if(crashCashoutLocked) return;
+            crashCashoutLocked = true;
+            clearInterval(crashInt); sounds.rocket.stop(); gsap.killTweensOf("#rocket");
+            finalize(true, crashVal, parseInt(document.getElementById('betAmount').value)); 
+            document.getElementById('cashoutBtn').classList.add('hidden'); 
+            document.getElementById('crashBtn').classList.remove('hidden'); 
+            gsap.set("#rocket", {x:0, y:0});
+        }
+
+        function finalize(won, mult, bet) {
+            isPlaying = false;
+            if(won) {
+                dmxBalance += (bet * mult); sounds.win.play(); sounds.cracker.play();
+                confetti({ particleCount: 150, spread: 70 });
+                gsap.to("#winOverlay", { opacity: 1, duration: 0.2, yoyo: true, repeat: 1 });
+                addLog(`WIN: +${(bet*mult).toFixed(2)} DMX`, "text-green-400 font-bold");
+            } else { sounds.lose.play(); addLog(`LOSS: -${bet} DMX`, "text-red-500"); }
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('dmxBalanceDisp').innerText = dmxBalance.toFixed(2) + " DMX";
+            document.getElementById('betValue').innerText = document.getElementById('betAmount').value + " DMX";
+        }
+        function openGame(g) { document.getElementById('lobby').style.display='none'; document.getElementById(g+'Game').style.display='flex'; }
+        function backToLobby() { document.querySelectorAll('.game-screen').forEach(s=>s.style.display='none'); document.getElementById('lobby').style.display='grid'; }
+        function addLog(m, c) { const e = document.createElement('div'); e.className = c; e.innerText = `> ${m}`; document.getElementById('liveFeed').prepend(e); }
+        function toggleAmbience() { ambienceOn = !ambienceOn; ambienceOn ? sounds.casino.play() : sounds.casino.stop(); document.getElementById('muteBtn').innerText = ambienceOn ? "🔊 ON" : "🔈 OFF"; }
+        
+        window.onload = () => { 
+            init3D(); fetchLiveRate(); updateUI(); setInterval(fetchLiveRate, 30000); 
+            // Referral Tracking
+            const ref = new URLSearchParams(window.location.search).get("ref");
+            if(ref) localStorage.setItem("dmx_referrer", ref);
+
+            // Audio Autoplay Fix
+            document.body.addEventListener("click",()=>{
+                if(!ambienceOn){
+                    sounds.casino.play();
+                    ambienceOn = true;
+                    document.getElementById('muteBtn').innerText = "🔊 ON";
+                }
+            },{once:true});
+        };
+    </script>
+</body>
+</html>
 
