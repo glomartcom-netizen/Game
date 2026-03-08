@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>DMX Casino</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+
+<script src="js/games.js"></script>
+
+</head>
+
+<body class="bg-black text-white">
+
+<div class="max-w-4xl mx-auto p-6">
+
+<h1 class="text-3xl font-bold mb-6">
+🎮 DMX Casino
+</h1>
+
+<button onclick="connectWallet()"
+class="bg-amber-500 text-black px-4 py-2 rounded">
+Connect Wallet
+</button>
+
+<div class="grid grid-cols-4 gap-4 mt-6">
+
+<button onclick="openGame('arena')" class="bg-indigo-600 p-4 rounded-xl">
+Arena
+</button>
+
+<button onclick="openGame('coinflip')" class="bg-indigo-600 p-4 rounded-xl">
+CoinFlip
+</button>
+
+<button onclick="openGame('dice')" class="bg-indigo-600 p-4 rounded-xl">
+Dice
+</button>
+
+<button onclick="openGame('crash')" class="bg-indigo-600 p-4 rounded-xl">
+Crash
+</button>
+
+</div>
+
+<div id="gameUI" class="mt-8"></div>
+
+</div>
+
+</body>
+</html>
