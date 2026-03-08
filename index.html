@@ -1,1 +1,296 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMX Master - Pro Elite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <style>
+        :root { --primary: #6366f1; --dark-bg: #030712; }
+        body { background: var(--dark-bg); color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .master-card { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 2rem; }
+        .stats-badge { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); color: #818cf8; transition: 0.3s; }
+        .btn-master { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); transition: 0.3s; font-weight: 900; text-transform: uppercase; }
+        .btn-master:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
+        .active-selection { border: 2px solid var(--primary) !important; background: rgba(99, 102, 241, 0.15) !important; }
+        .loading-spinner { border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid white; border-radius: 50%; width: 14px; height: 14px; animation: spin 0.8s linear infinite; display: inline-block; margin-right: 6px; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        input { background: rgba(0,0,0,0.4) !important; border: 1px solid rgba(255,255,255,0.05) !important; padding: 1rem; border-radius: 1rem; outline: none; font-family: monospace; }
+        input:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body class="p-4 lg:p-8">
+
+    <header class="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div>
+            <h1 class="text-4xl font-black tracking-tighter italic">DMX <span class="text-indigo-500">MASTER</span></h1>
+            <div class="flex gap-3 mt-2">
+                <span class="stats-badge px-3 py-1 rounded-full text-[10px] font-bold" id="netStatus">Checking Nodes...</span>
+                <span class="stats-badge px-3 py-1 rounded-full text-[10px] font-bold" id="jackpotDisplay">Jackpot: -- DMX</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block">
+                <p class="text-[10px] text-slate-500 font-bold uppercase">Safe Balance</p>
+                <p id="userBalance" class="text-xl font-mono font-bold text-indigo-400">0.00 DMX</p>
+            </div>
+            <button id="connectBtn" class="btn-master px-8 py-3 rounded-2xl text-sm">Connect Wallet</button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-8 space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <section class="master-card p-6">
+                    <h2 class="text-xl font-bold mb-4">⚔️ Arena</h2>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <button onclick="setSide('arena', 0)" id="arena0" class="py-4 master-card active-selection text-sm font-bold">ALPHA</button>
+                        <button onclick="setSide('arena', 1)" id="arena1" class="py-4 master-card text-sm font-bold">OMEGA</button>
+                    </div>
+                    <input id="arenaAmount" type="number" placeholder="100 - 50,000 DMX" class="w-full mb-3">
+                    <button onclick="playGame('arena')" id="arenaBtn" class="btn-master w-full py-4 rounded-xl">Place Bet</button>
+                </section>
+
+                <section class="master-card p-6">
+                    <h2 class="text-xl font-bold mb-4">🪙 Coin Flip</h2>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <button onclick="setSide('coin', 0)" id="coin0" class="py-4 master-card active-selection text-sm font-bold">HEADS</button>
+                        <button onclick="setSide('coin', 1)" id="coin1" class="py-4 master-card text-sm font-bold">TAILS</button>
+                    </div>
+                    <input id="coinAmount" type="number" placeholder="100 - 50,000 DMX" class="w-full mb-3">
+                    <button onclick="playGame('coin')" id="coinBtn" class="btn-master w-full py-4 rounded-xl">Flip Coin</button>
+                </section>
+            </div>
+
+            <section class="master-card p-8" id="crashCard">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">📈 Crash</h2>
+                    <div id="crashMult" class="text-5xl font-black text-indigo-400 tabular-nums">1.00x</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input id="crashAmount" type="number" placeholder="Stake (Min 100)" class="md:col-span-1">
+                    <input id="crashAuto" type="number" step="0.1" placeholder="Auto Cashout (e.g. 2.0)" class="md:col-span-1">
+                    <button onclick="playGame('crash')" id="crashBtn" class="btn-master py-4 rounded-xl md:col-span-1">Enter Crash</button>
+                </div>
+            </section>
+        </div>
+
+        <div class="lg:col-span-4">
+            <div class="master-card p-6 h-full min-h-[500px] flex flex-col">
+                <h3 class="text-xs font-black text-indigo-400 uppercase mb-4 border-b border-white/5 pb-2">Live Pipeline</h3>
+                <div id="eventFeed" class="space-y-3 overflow-y-auto flex-1 text-[11px] font-mono"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let walletProvider, signer, account, activeRPC, mainContract;
+        let gameChoices = { arena: 0, coin: 0 };
+        let isProcessing = false;
+        
+        const ADDR = { contract: "0x...", dmx: "0x..." }; 
+        const RPC_NODES = ["https://bsc-dataseed.binance.org/", "https://rpc.ankr.com/bsc"];
+
+        if(window.ethereum){
+            window.ethereum.on("accountsChanged", () => location.reload());
+            window.ethereum.on("chainChanged", () => location.reload());
+        }
+
+        function setSide(game, val) {
+            gameChoices[game] = val;
+            document.querySelectorAll(`[id^="${game}"]`).forEach(b => b.classList.remove("active-selection"));
+            document.getElementById(game + val).classList.add("active-selection");
+        }
+
+        async function initRPC() {
+            for (let url of RPC_NODES) {
+                try {
+                    const tempProvider = new ethers.JsonRpcProvider(url);
+                    await tempProvider.getNetwork();
+                    activeRPC = tempProvider;
+                    document.getElementById('netStatus').innerText = "NODE: ONLINE";
+                    document.getElementById('netStatus').classList.add('text-green-400');
+                    initLiveFeed();
+                    updateJackpot();
+                    checkAutoConnect();
+                    return;
+                } catch (e) { console.warn(`Node ${url} down.`); }
+            }
+        }
+
+        setInterval(initRPC, 300000);
+
+        async function checkAutoConnect() {
+            if (window.ethereum) {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) await connect();
+            }
+        }
+
+        async function updateJackpot() {
+            if (!activeRPC) return;
+            try {
+                const contract = new ethers.Contract(ADDR.contract, ["function jackpotPool() view returns(uint256)"], activeRPC);
+                const pool = await contract.jackpotPool();
+                document.getElementById('jackpotDisplay').innerText = `Jackpot: ${parseFloat(ethers.formatEther(pool)).toLocaleString()} DMX`;
+            } catch (e) { document.getElementById('jackpotDisplay').innerText = "Jackpot: Live"; }
+        }
+
+        setInterval(updateJackpot, 20000);
+
+        function initLiveFeed() {
+            if (!activeRPC) return;
+            const abi = [
+                "event GamePlayed(address indexed player, string game, uint256 amount, bool won, uint256 payout)",
+                "event CrashResult(address indexed player, uint256 crashPoint, bool won)"
+            ];
+            if (mainContract) mainContract.removeAllListeners();
+            mainContract = new ethers.Contract(ADDR.contract, abi, activeRPC);
+
+            mainContract.on("GamePlayed", (player, game, amount, won, payout) => {
+                addFeedItem(player, game, amount, won, payout);
+                if(player.toLowerCase() === account?.toLowerCase()) showLocalResult(game, won);
+                updateJackpot();
+            });
+
+            mainContract.on("CrashResult", (player, point, won) => {
+                if(player.toLowerCase() === account?.toLowerCase()) {
+                    clearInterval(crashInterval);
+                    document.getElementById("crashMult").innerText = (Number(point)/100).toFixed(2) + "x CRASH!";
+                    showLocalResult('crash', won);
+                }
+            });
+        }
+
+        async function playGame(gameType) {
+            if (isProcessing) return;
+            if (!signer) return connect();
+
+            const amountInput = document.getElementById(gameType + 'Amount');
+            const autoInput = gameType === "crash" ? document.getElementById("crashAuto") : null;
+            const btn = document.getElementById(gameType + 'Btn');
+            const val = parseFloat(amountInput.value);
+
+            if (!val || val < 100) return alert("Min bet 100 DMX");
+            if (val > 50000) return alert("Max bet 50,000 DMX");
+
+            try {
+                const network = await walletProvider.getNetwork();
+                if (network.chainId !== 56n) {
+                    try {
+                        await window.ethereum.request({
+                            method: "wallet_switchEthereumChain",
+                            params: [{ chainId: "0x38" }]
+                        });
+                    } catch (e) { return alert("Please switch to BSC Mainnet."); }
+                }
+
+                isProcessing = true;
+                btn.disabled = true;
+                amountInput.disabled = true;
+                if(autoInput) autoInput.disabled = true;
+                
+                btn.innerHTML = `<span class="loading-spinner"></span> SIGNING...`;
+
+                if(gameType === 'crash') startCrashVisual();
+
+                const dmxWei = ethers.parseEther(val.toString());
+                let choice = gameChoices[gameType] || 0;
+                
+                if(gameType === 'crash' && autoInput) {
+                    choice = autoInput.value ? Math.floor(parseFloat(autoInput.value) * 100) : 200;
+                }
+                
+                const dmxContract = new ethers.Contract(ADDR.dmx, ["function approve(address,uint256) returns(bool)", "function allowance(address,address) view returns(uint256)"], signer);
+                const allowance = await dmxContract.allowance(account, ADDR.contract);
+                
+                if (allowance < dmxWei) {
+                    btn.innerHTML = `<span class="loading-spinner"></span> APPROVING...`;
+                    await (await dmxContract.approve(ADDR.contract, ethers.MaxUint256)).wait();
+                }
+
+                const gameContract = new ethers.Contract(ADDR.contract, ["function play(string,uint8,uint256)"], signer);
+                const tx = await gameContract.play(gameType, choice, dmxWei);
+                
+                btn.innerHTML = `<span class="loading-spinner"></span> MINING...`;
+                await tx.wait();
+                btn.innerHTML = `<span class="loading-spinner"></span> WAITING FOR RESULT...`;
+
+            } catch (err) {
+                console.error(err);
+                alert(err.reason || "Action Failed");
+                clearInterval(crashInterval);
+                btn.disabled = false;
+                amountInput.disabled = false;
+                if(autoInput) autoInput.disabled = false;
+                btn.innerText = "PLAY AGAIN";
+                isProcessing = false;
+            }
+        }
+
+        let crashInterval, currentMult = 1.00;
+        // 🟢 FIXED: Safe Visual Reset at 25x
+        function startCrashVisual() {
+            currentMult = 1.00;
+            clearInterval(crashInterval);
+            crashInterval = setInterval(() => {
+                currentMult += 0.05;
+                document.getElementById("crashMult").innerText = currentMult.toFixed(2) + "x";
+                if(currentMult > 25) {
+                    clearInterval(crashInterval);
+                    document.getElementById("crashMult").innerText = "1.00x";
+                }
+            }, 100);
+        }
+
+        function showLocalResult(game, won) {
+            const btn = document.getElementById(game + 'Btn');
+            const amountInput = document.getElementById(game + 'Amount');
+            const autoInput = game === "crash" ? document.getElementById("crashAuto") : null;
+            
+            btn.innerText = won ? "WINNER! 💰" : "LOST ⚡";
+            btn.className = won ? "w-full py-4 rounded-xl bg-green-600 font-bold" : "w-full py-4 rounded-xl bg-red-900 font-bold";
+            
+            setTimeout(() => {
+                btn.innerText = "PLAY AGAIN";
+                btn.className = "btn-master w-full py-4 rounded-xl";
+                btn.disabled = false;
+                amountInput.disabled = false;
+                if(autoInput) autoInput.disabled = false;
+                isProcessing = false;
+                updateBalance();
+            }, 3000);
+        }
+
+        async function connect() {
+            if (!window.ethereum) return alert("Install MetaMask");
+            walletProvider = new ethers.BrowserProvider(window.ethereum);
+            signer = await walletProvider.getSigner();
+            account = await signer.getAddress();
+            document.getElementById('connectBtn').innerText = account.slice(0,6)+'...'+account.slice(-4);
+            updateBalance();
+        }
+
+        async function updateBalance() {
+            if (!account || !activeRPC) return;
+            const dmx = new ethers.Contract(ADDR.dmx, ["function balanceOf(address) view returns(uint256)"], activeRPC);
+            const bal = await dmx.balanceOf(account);
+            document.getElementById('userBalance').innerText = parseFloat(ethers.formatEther(bal)).toFixed(2) + " DMX";
+        }
+
+        function addFeedItem(player, game, amount, won, payout) {
+            const feed = document.getElementById('eventFeed');
+            const div = document.createElement('div');
+            div.className = `p-3 rounded-xl border-l-4 mb-2 ${won ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5'}`;
+            div.innerHTML = `<b>${game.toUpperCase()}</b> | ${player.slice(0,6)}... | <b>${won ? '+' + ethers.formatEther(payout) : '-' + ethers.formatEther(amount)}</b>`;
+            feed.prepend(div);
+            if (feed.children.length > 10) feed.lastChild.remove();
+        }
+
+        window.onload = initRPC;
+        document.getElementById('connectBtn').addEventListener('click', connect);
+    </script>
+</body>
+</html>
 
