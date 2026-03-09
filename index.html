@@ -202,13 +202,6 @@ function walletAction(type){
     if(!isWalletConnected) return alert("Connect wallet first");
     alert(`${type} protocol initiated. Waiting for chain confirmation...`);
 }
-    
-        // ------------------ GAME UI ------------------
-function openGame(g){ document.getElementById('lobbyScreen').style.display='none'; document.getElementById(g+'Game').style.display='flex'; }
-function backToLobby(){ document.getElementById('lobbyScreen').style.display='grid'; document.querySelectorAll('.game-screen').forEach(s=>s.style.display='none'); }
-function setSide(g,v){ selectedSides[g]=v; document.querySelectorAll(`[id^="${g}"]`).forEach(b=>b.classList.remove('active-selection')); document.getElementById(g+v).classList.add('active-selection'); }
-function toggleAmbience(){ sounds.ambience.playing()? (sounds.ambience.stop(),document.getElementById('muteBtn').innerText="🔈 SOUND: OFF"):(sounds.ambience.play(),document.getElementById('muteBtn').innerText="🔊 SOUND: ON"); }
-function addLog(m,c){ const f=document.getElementById('liveFeed'); const d=document.createElement('div'); d.className=c; d.innerText=`[${new Date().toLocaleTimeString()}] ${m}`; f.prepend(d); }
 
 // ------------------ 3D INIT ------------------
 function init3D(){
@@ -615,19 +608,7 @@ animateDice();
             d.className = c; d.innerText = `[${new Date().toLocaleTimeString()}] ${m}`;
             f.prepend(d);
         }
-
-        function connectWallet() {
-            isWalletConnected = true;
-            document.getElementById('connectBtn').innerText = "0x7a2...f4d1";
-            document.getElementById('refLink').innerText = "https://dmxelite.pro/ref?id=7a2f4d1";
-            addLog("Wallet Connected", "text-indigo-400");
-        }
-
-        function walletAction(type) {
-            if(!isWalletConnected) return alert("Please connect wallet first");
-            alert(`${type} protocol initiated. Waiting for chain confirmation...`);
-        }
-
+    
         function openGame(g) { 
     document.getElementById('lobbyScreen').style.display = 'none';
     // Hide all other game screens
