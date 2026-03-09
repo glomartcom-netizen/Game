@@ -191,60 +191,236 @@
                 return {sc, re, ca};
             };
 
-            // Coin Engine
-            const c = createScene('coinCanvas');
-            const coinMats = [
-                new THREE.MeshStandardMaterial({color: 0xd4af37}), 
-                new THREE.MeshStandardMaterial({map: loader.load('assets/heads.png')}), 
-                new THREE.MeshStandardMaterial({map: loader.load('assets/tails.png')})
-            ];
-            coinMesh = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.3, 32), coinMats);
-            coinMesh.rotation.x = Math.PI/2;
-            c.sc.add(coinMesh);
+            // ============================
+// REAL DMX COIN ENGINE
+// ============================
+
+// Create scene
+const c = createScene('coinCanvas');
+
+// Texture loader
+const loader = new THREE.TextureLoader();
+
+// Load DMX coin textures
+const headTexture = loader.load('assets/coin_heads.png');
+const tailTexture = loader.load('assets/coin_tails.png');
+
+// Gold material for coin edge
+const goldMaterial = new THREE.MeshStandardMaterial({
+ color: 0xd4af37,
+ metalness: 1,
+ roughness: 0.25
+});
+
+// Coin face materials
+const headMaterial = new THREE.MeshStandardMaterial({
+ map: headTexture,
+ metalness: 1,
+ roughness: 0.25
+});
+
+const tailMaterial = new THREE.MeshStandardMaterial({
+ map: tailTexture,
+ metalness: 1,
+ roughness: 0.25
+});
+
+// Cylinder materials
+const coinMaterials = [
+ goldMaterial, // edge
+ goldMaterial, // edge
+ headMaterial, // heads
+ tailMaterial, // tails
+ goldMaterial,
+ goldMaterial
+];
+
+// Coin geometry
+const coinGeometry = new THREE.CylinderGeometry(2, 2, 0.35, 64);
+
+// Create coin
+coinMesh = new THREE.Mesh(coinGeometry, coinMaterials);
+
+// Rotate coin correctly
+coinMesh.rotation.x = Math.PI / 2;
+
+// Add coin to scene
+c.sc.add(coinMesh);
+
+// Lighting for real gold shine
+const light1 = new THREE.PointLight(0xffffff, 1.5);
+light1.position.set(5, 6, 5);
+c.sc.add(light1);
+
+const light2 = new THREE.AmbientLight(0xffffff, 0.5);
+c.sc.add(light2);
 
             // Dice Engine
-            const d = createScene('diceCanvas');
-            const diceMats = [1,2,3,4,5,6].map(n => new THREE.MeshStandardMaterial({map: loader.load(`assets/dice${n}.png`)}));
-            diceMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), diceMats);
-            d.sc.add(diceMesh);
+const d = createScene('diceCanvas');
 
-            const animate = () => {
-                requestAnimationFrame(animate);
-                if(!isPlaying) { coinMesh.rotation.y += 0.01; diceMesh.rotation.x += 0.01; }
-                c.re.render(c.sc, c.ca); d.re.render(d.sc, d.ca);
-            };
-            animate();
-        }
+// Texture loader
+const loader = new THREE.TextureLoader();
+
+// Dice materials (1 - 6 faces)
+const diceMaterials = [
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice1.png') }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice2.png') }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice3.png') }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice4.png') }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice5.png') }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice6.png') })
+];
+
+// Dice mesh
+diceMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 2.2, 2.2, 2, 2, 2),
+    diceMaterials
+);
+
+// Position
+diceMesh.position.set(0,0,0);
+
+// Scene add
+d.sc.add(diceMesh);
+
+// Lighting
+const diceLight = new THREE.PointLight(0xffffff, 1.5);
+diceLight.position.set(5,6,5);
+d.sc.add(diceLight);
+
+const ambientLight = new THREE.AmbientLight(0xffffff,0.6);
+d.sc.add(ambientLight);
+
+
+// Animation loop
+function animateDice(){
+    requestAnimationFrame(animateDice);
+
+    if(!isPlaying){
+        diceMesh.rotation.x += 0.01;
+        diceMesh.rotation.y += 0.01;
+    }
+
+    d.re.render(d.sc, d.ca);
+}
+
+animateDice();
 
         function playGame(type) {
-            const bet = parseInt(document.getElementById('betAmount').value);
-            if(dmxBalance < bet || isPlaying) return;
-            isPlaying = true; dmxBalance -= bet; currentBet = bet; updateUI();
 
-            if(type === 'coin') {
-                const res = Math.random() > 0.5 ? "Heads" : "Tails";
-                const targetY = coinMesh.rotation.y + (Math.PI * 10);
-                const targetX = res === "Heads" ? Math.PI/2 : -Math.PI/2;
-                gsap.to(coinMesh.rotation, { y: targetY, x: targetX, duration: 2, ease: "power2.out", onComplete: () => finalize(res === selectedSides.coin, bet, 1.9) });
-            } else if(type === 'dice') {
-                const res = Math.floor(Math.random()*6)+1;
-                const rots = { 1:[0,0], 2:[0,Math.PI/2], 3:[0,-Math.PI/2], 4:[Math.PI/2,0], 5:[-Math.PI/2,0], 6:[Math.PI,0] };
-                gsap.to(diceMesh.rotation, { x: rots[res][0] + (Math.PI*8), y: rots[res][1] + (Math.PI*8), duration: 2, ease: "power2.out", onComplete: () => finalize(res === selectedSides.dice, bet, 5) });
-            } else if(type === 'crash') {
-                startCrash(bet);
-            } else if(type === 'slot') {
-                gsap.set("#reel1, #reel2, #reel3", {y:0});
-                const res = [Math.floor(Math.random()*6), Math.floor(Math.random()*6), Math.floor(Math.random()*6)];
-                [1,2,3].forEach((id, i) => {
-                    gsap.to(`#reel${id}`, { y: -2400 - (res[i]*80), duration: 2+i, ease: "power2.inOut", onComplete: () => {
-                        if(id===3) finalize(res[0]===res[1] && res[1]===res[2], bet, 10);
-                    }});
-                });
-            } else if(type === 'battle') {
-                setTimeout(() => finalize(Math.random() > 0.5, bet, 1.8), 1500);
+    const bet = parseInt(document.getElementById('betAmount').value);
+
+    // check balance
+    if (dmxBalance < bet || isPlaying) return;
+
+    // start game
+    isPlaying = true;
+    dmxBalance -= bet;
+    currentBet = bet;
+
+    updateUI();
+
+    // COIN GAME
+    if (type === 'coin') {
+
+        const result = Math.random() < 0.5 ? "heads" : "tails";
+
+        gsap.to(coinMesh.rotation,{
+            y: coinMesh.rotation.y + Math.PI * 12,
+            x: Math.PI / 2,
+            duration: 2,
+            ease: "power3.out",
+            onComplete: ()=>{
+
+                if(result === "heads"){
+                    dmxBalance += currentBet * 2;
+                }
+
+                isPlaying = false;
+                updateUI();
+
+                alert("Coin Result: " + result);
             }
-        }
+        });
+    }
 
+    // DICE GAME
+    if (type === 'dice') {
+
+        const result = Math.floor(Math.random() * 6) + 1;
+
+        gsap.to(diceMesh.rotation,{
+            x: diceMesh.rotation.x + Math.PI * 4,
+            y: diceMesh.rotation.y + Math.PI * 4,
+            duration: 1.8,
+            ease: "power2.out",
+            onComplete: ()=>{
+
+                if(result > 3){
+                    dmxBalance += currentBet * 2;
+                }
+
+                isPlaying = false;
+                updateUI();
+
+                alert("Dice Result: " + result);
+            }
+        });
+    }
+}
+            } 
+else if(type === 'crash') {
+
+    // start crash game
+    startCrash(bet);
+
+} 
+else if(type === 'slot') {
+
+    // reset reels
+    gsap.set("#reel1, #reel2, #reel3", { y: 0 });
+
+    // random result
+    const res = [
+        Math.floor(Math.random()*6),
+        Math.floor(Math.random()*6),
+        Math.floor(Math.random()*6)
+    ];
+
+    // spin reels
+    [1,2,3].forEach((id, i) => {
+
+        gsap.to(`#reel${id}`, {
+            y: -2400 - (res[i] * 80),
+            duration: 2 + i,
+            ease: "power2.inOut",
+
+            onComplete: () => {
+
+                // check win after last reel
+                if(id === 3){
+
+                    const win = res[0] === res[1] && res[1] === res[2];
+
+                    finalize(win, bet, 10);
+                }
+            }
+        });
+
+    });
+
+} 
+else if(type === 'battle') {
+
+    // simple battle result
+    setTimeout(() => {
+
+        const win = Math.random() > 0.5;
+
+        finalize(win, bet, 1.8);
+
+    }, 1500);
+}
         function startCrash(bet) {
             document.getElementById('crashBtn').classList.add('hidden');
             document.getElementById('cashoutBtn').classList.remove('hidden');
@@ -273,12 +449,28 @@
         }
 
         function cashoutCrash() {
-            clearInterval(crashInterval);
-            document.getElementById('crashBtn').classList.remove('hidden');
-            document.getElementById('cashoutBtn').classList.add('hidden');
-            finalize(true, currentBet, currentCrash);
-            gsap.set("#rocket", {x:0, y:0});
-        }
+
+    // stop crash timer
+    clearInterval(crashInterval);
+
+    // show / hide buttons
+    document.getElementById('crashBtn').classList.remove('hidden');
+    document.getElementById('cashoutBtn').classList.add('hidden');
+
+    // payout
+    finalize(true, currentBet, currentCrash);
+
+    // reset rocket position
+    gsap.set("#rocket", { x:0, y:0 });
+
+    // reset crash multiplier
+    currentCrash = 1;
+
+    // game finished
+    isPlaying = false;
+
+    updateUI();
+}
 
         function finalize(won, bet, mult) {
             isPlaying = false;
