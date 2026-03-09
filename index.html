@@ -20,7 +20,27 @@
         .lobby-card:hover { border-color: #6366f1; transform: translateY(-5px); box-shadow: 0 5px 20px rgba(99,102,241,0.3); }
         .game-screen { display: none; width: 100%; min-height: 500px; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #1e293b 0%, #020617 100%); border-radius: 20px; position: relative; }
         .active-selection { border: 2px solid #6366f1!important; background: rgba(99,102,241,0.3)!important; }
-        #winPopup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: rgba(0,0,0,0.95); border: 2px solid gold; padding: 40px; border-radius: 20px; z-index: 1000; text-align: center; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #winPopup{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: rgba(0,0,0,0.95);
+    border: 2px solid gold;
+    padding: 40px;
+    border-radius: 20px;
+    z-index: 1000;
+    text-align: center;
+    transition: 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+
+    box-shadow:0 0 25px gold;
+    animation: winGlow 1s infinite alternate;
+}
+
+@keyframes winGlow{
+    from{ box-shadow:0 0 20px gold; }
+    to{ box-shadow:0 0 50px gold; }
+}
         #crashArea { width: 100%; height: 300px; position: relative; overflow: hidden; border-bottom: 2px solid #334155; }
         #rocket { position: absolute; bottom: 20px; left: 20px; font-size: 3rem; transform: rotate(45deg); z-index: 10; }
         .reel-hd { width: 80px; height: 100px; overflow: hidden; position: relative; background: #111; border-radius: 10px; border: 2px solid #334155; }
@@ -29,9 +49,9 @@
 <body class="p-2 md:p-4">
 
     <div id="winPopup">
-        <h2 class="text-yellow-500 font-black text-4xl mb-2">WINNER!</h2>
-        <p id="winAmountMsg" class="text-white text-2xl font-bold">0.00 DMX</p>
-    </div>
+    <h2 class="text-yellow-500 font-black text-4xl mb-2">WINNER! 🎉</h2>
+    <p id="winAmountMsg" class="text-white text-2xl font-bold">0.00 DMX</p>
+</div>
 
     <header class="max-w-7xl mx-auto mb-4 flex justify-between items-center">
         <div>
@@ -258,9 +278,6 @@ c.sc.add(light2);
             // Dice Engine
 const d = createScene('diceCanvas');
 
-// Texture loader
-const loader = new THREE.TextureLoader();
-
 // Dice materials (1 - 6 faces)
 const diceMaterials = [
     new THREE.MeshStandardMaterial({ map: loader.load('assets/dice1.png') }),
@@ -306,121 +323,84 @@ function animateDice(){
 
 animateDice();
 
-        function playGame(type) {
+        function playGame(type){
 
     const bet = parseInt(document.getElementById('betAmount').value);
 
-    // check balance
-    if (dmxBalance < bet || isPlaying) return;
+    if(dmxBalance < bet || isPlaying) return;
 
-    // start game
     isPlaying = true;
     dmxBalance -= bet;
     currentBet = bet;
 
     updateUI();
 
-    // COIN GAME
-    if (type === 'coin') {
+    // COIN
+    if(type === 'coin'){
 
         const result = Math.random() < 0.5 ? "heads" : "tails";
 
         gsap.to(coinMesh.rotation,{
             y: coinMesh.rotation.y + Math.PI * 12,
-            x: Math.PI / 2,
-            duration: 2,
-            ease: "power3.out",
-            onComplete: ()=>{
+            x: Math.PI/2,
+            duration:2,
+            ease:"power3.out",
+            onComplete:()=>{
 
                 if(result === "heads"){
-                    dmxBalance += currentBet * 2;
+                    dmxBalance += bet * 2;
                 }
 
                 isPlaying = false;
                 updateUI();
 
-                alert("Coin Result: " + result);
+                alert("Coin Result: "+result);
             }
         });
+
     }
 
-    // DICE GAME
-    if (type === 'dice') {
+// DICE
+    else if(type === 'dice'){
 
-        const result = Math.floor(Math.random() * 6) + 1;
+        const result = Math.floor(Math.random()*6)+1;
 
         gsap.to(diceMesh.rotation,{
-            x: diceMesh.rotation.x + Math.PI * 4,
-            y: diceMesh.rotation.y + Math.PI * 4,
-            duration: 1.8,
-            ease: "power2.out",
-            onComplete: ()=>{
+            x: diceMesh.rotation.x + Math.PI*4,
+            y: diceMesh.rotation.y + Math.PI*4,
+            duration:1.8,
+            ease:"power2.out",
+            onComplete:()=>{
 
                 if(result > 3){
-                    dmxBalance += currentBet * 2;
+                    dmxBalance += bet * 2;
                 }
 
                 isPlaying = false;
                 updateUI();
 
-                alert("Dice Result: " + result);
+                alert("Dice Result: "+result);
             }
         });
+
     }
-}
-            } 
-else if(type === 'crash') {
 
-    // start crash game
-    startCrash(bet);
+    // CRASH
+    else if(type === 'crash'){
+        startCrash(bet);
+    }
 
-} 
-else if(type === 'slot') {
+    // SLOT
+    else if(type === 'slot'){
+        startSlots(bet);
+    }
 
-    // reset reels
-    gsap.set("#reel1, #reel2, #reel3", { y: 0 });
-
-    // random result
-    const res = [
-        Math.floor(Math.random()*6),
-        Math.floor(Math.random()*6),
-        Math.floor(Math.random()*6)
-    ];
-
-    // spin reels
-    [1,2,3].forEach((id, i) => {
-
-        gsap.to(`#reel${id}`, {
-            y: -2400 - (res[i] * 80),
-            duration: 2 + i,
-            ease: "power2.inOut",
-
-            onComplete: () => {
-
-                // check win after last reel
-                if(id === 3){
-
-                    const win = res[0] === res[1] && res[1] === res[2];
-
-                    finalize(win, bet, 10);
-                }
+    // BATTLE
+    else if(type === 'battle'){
+        startBattle(bet);
+    }
             }
-        });
-
-    });
-
-} 
-else if(type === 'battle') {
-
-    // simple battle result
-    setTimeout(() => {
-
-        const win = Math.random() > 0.5;
-
-        finalize(win, bet, 1.8);
-
-    }, 1500);
-}
+            
         function startCrash(bet) {
 
     document.getElementById('crashBtn').classList.add('hidden');
@@ -568,28 +548,57 @@ else if(type === 'battle') {
         }
 
         function finalize(won, bet, mult) {
-            isPlaying = false;
-            if(won) {
-                const winAmt = bet * mult;
-                dmxBalance += winAmt;
-                sounds.win.play();
-                showWinPopup(winAmt);
-                confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
-                addLog(`Won: +${winAmt.toFixed(2)} DMX`, "text-green-400");
-            } else {
-                sounds.lose.play();
-                addLog(`Lost: -${bet} DMX`, "text-red-500");
-            }
-            updateUI();
+
+    isPlaying = false;
+
+    if(won){
+
+        const winAmt = bet * mult;
+
+        dmxBalance += winAmt;
+
+        // sound
+        if(sounds.win) sounds.win.play();
+
+        // popup
+        showWinPopup(winAmt);
+
+        // confetti
+        if(typeof confetti !== "undefined"){
+            confetti({
+                particleCount: 200,
+                spread: 80,
+                origin: { y: 0.6 }
+            });
         }
 
-        function showWinPopup(amt) {
-            const p = document.getElementById('winPopup');
-            document.getElementById('winAmountMsg').innerText = `You Won ${amt.toFixed(2)} DMX`;
-            p.style.transform = "translate(-50%, -50%) scale(1)";
-            setTimeout(() => { p.style.transform = "translate(-50%, -50%) scale(0)"; }, 2500);
-        }
+        addLog(`Won: +${winAmt.toFixed(2)} DMX`, "text-green-400");
 
+    } 
+    else{
+
+        if(sounds.lose) sounds.lose.play();
+
+        addLog(`Lost: -${bet} DMX`, "text-red-500");
+    }
+
+    updateUI();
+}
+
+        function showWinPopup(amt){
+
+    const popup = document.getElementById('winPopup');
+
+    document.getElementById('winAmountMsg').innerText =
+    `You Won ${amt.toFixed(2)} DMX`;
+
+    popup.style.transform = "translate(-50%, -50%) scale(1)";
+
+    setTimeout(()=>{
+        popup.style.transform = "translate(-50%, -50%) scale(0)";
+    },2500);
+
+}
         function addLog(m, c) {
             const f = document.getElementById('liveFeed');
             const d = document.createElement('div');
