@@ -268,6 +268,9 @@ const modal = createAppKit({
   features: { analytics: true }
 });
 
+// GLOBAL MAP FOR BUTTONS
+window.connectWallet = () => modal.open();
+
 window.syncWallet = async () => {
     try {
         const isConnected = modal.getIsConnected();
@@ -291,7 +294,6 @@ window.syncWallet = async () => {
             if (connectBtn) {
                 connectBtn.innerText = address.substring(0, 6) + "..." + address.substring(address.length - 4);
             }
-            // Real Game Activation - Start with initial balance if needed
             if(dmxBalance === 0) dmxBalance = 1000.00; 
             updateUI();
         } else {
@@ -301,8 +303,6 @@ window.syncWallet = async () => {
         }
     } catch (error) { console.error("Sync Error:", error); }
 };
-
-window.connectWallet = () => modal.open();
 
 modal.subscribeState(() => window.syncWallet());
 
@@ -323,7 +323,6 @@ function createScene(id) {
 let coinScene, diceScene;
 
 function init3D() {
-    const loader = new THREE.TextureLoader();
     coinScene = createScene('coinCanvas');
     if(coinScene) {
         const gold = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, roughness: 0.1 });
@@ -354,34 +353,51 @@ function animateDice() {
 }
 
 // --- 4. CORE ACTIONS & NAVIGATION ---
-window.handleAction = (type) => {
+window.openGame = (id) => {
+    document.getElementById('lobbyScreen').classList.add('hidden');
+    document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none');
+    const el = document.getElementById(id + 'Game');
+    if(el) el.style.display = 'flex';
+};
+
+window.backToLobby = () => {
+    document.getElementById('lobbyScreen').classList.remove('hidden');
+    document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none');
+};
+
+window.walletAction = (type) => {
     if (!window.isWalletConnected) { alert("Connect Wallet First!"); modal.open(); return; }
-    if (type === 'deposit') {
+    if (type === 'Deposit') {
         const amt = prompt("Enter Deposit (Min 100 DMX):", "100");
-        if (amt >= 100) alert(`Mode: DMX | USDT BEP20\nRate: PancakeSwap Live\nRedirecting...`);
-    } else if (type === 'withdraw') {
-        prompt("Enter DMX Amount to Withdraw:");
-        alert("Request sent to Admin.");
-    } else if (type === 'claim') {
-        alert("5% Referral reward claimed!");
+        if (amt >= 100) alert(`Mode: DMX | USDT BEP20\nRedirecting to secure gateway...`);
+    } else if (type === 'Withdraw') {
+        alert("Withdrawal request sent to Admin.");
+    } else if (type === 'Claim') {
+        alert("Referral reward claimed!");
     }
 };
 
-function updateUI() {
+window.updateUI = () => {
     document.getElementById('dmxGame').innerText = dmxBalance.toFixed(2) + " DMX";
     document.getElementById('betValue').innerText = document.getElementById('betAmount').value + " DMX";
-}
+};
+
+window.setSide = (game, val) => {
+    selectedSides[game] = val;
+    document.querySelectorAll(`[id^="${game}"]`).forEach(btn => btn.classList.remove('active-selection'));
+    document.getElementById(game + val).classList.add('active-selection');
+};
 
 // --- 5. GAME LOGIC ---
 window.playGame = (type) => {
-    if(!isWalletConnected) { alert("Connect Wallet for Real Play!"); return; }
+    if(!window.isWalletConnected) { alert("Connect Wallet for Real Play!"); modal.open(); return; }
     const bet = parseInt(document.getElementById('betAmount').value);
     if(dmxBalance < bet || isPlaying) return;
 
     isPlaying = true;
     dmxBalance -= bet;
     currentBet = bet;
-    updateUI();
+    window.updateUI();
 
     if(type === 'coin') {
         const win = Math.random() > 0.5;
@@ -449,8 +465,18 @@ function finalize(won, bet, mult) {
         dmxBalance += winAmt;
         sounds.win.play();
         showWinPopup(winAmt);
-    } else { sounds.lose.play(); }
-    updateUI();
+    } else { 
+        sounds.lose.play(); 
+    }
+    window.updateUI();
+}
+
+function showWinPopup(amt) {
+    const popup = document.getElementById('winPopup');
+    document.getElementById('winAmountMsg').innerText = amt.toFixed(2) + " DMX";
+    popup.classList.remove('hidden');
+    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    setTimeout(() => popup.classList.add('hidden'), 3000);
 }
 
 // --- 6. INITIALIZATION ---
@@ -468,8 +494,6 @@ window.addEventListener('load', () => {
     });
     setTimeout(window.syncWallet, 1000);
 });
-
-
 </script>
 </body>
 </html>
