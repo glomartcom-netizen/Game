@@ -474,200 +474,143 @@ function animateDice(){
 
 animateDice();
 
-        function playGame(type){
+        /**
+ * Main Entry Point for all games
+ * @param {string} type - The game category (coin, dice, crash, etc.)
+ */
+function playGame(type) {
+    const betInput = document.getElementById('betAmount');
+    const bet = parseInt(betInput.value);
 
-    const bet = parseInt(document.getElementById('betAmount').value);
+    // 1. Safety Checks
+    if (dmxBalance < bet) {
+        if(window.addLog) window.addLog("Error: Insufficient DMX Balance", "text-red-500");
+        alert("Not enough DMX!");
+        return;
+    }
+    if (isPlaying) return;
 
-    if(dmxBalance < bet || isPlaying) return;
-
+    // 2. Lock State & Deduct Balance
     isPlaying = true;
     dmxBalance -= bet;
     currentBet = bet;
-
     updateUI();
 
-    // COIN
-    if(type === 'coin'){
-
-        const result = Math.random() < 0.5 ? "heads" : "tails";
-
-        gsap.to(coinMesh.rotation,{
-            y: coinMesh.rotation.y + Math.PI * 12,
-            x: Math.PI/2,
-            duration:2,
-            ease:"power3.out",
-            onComplete:()=>{
-
-                if(result === "heads"){
-                    dmxBalance += bet * 2;
-                }
-
-                isPlaying = false;
-                updateUI();
-
-                alert("Coin Result: "+result);
-            }
-        });
-
+    // 3. Game Router
+    switch(type) {
+        case 'coin':  handleCoinFlip(bet); break;
+        case 'dice':  handleDiceRoll(bet); break;
+        case 'crash': startCrash(bet); break;
+        case 'slot':  startSlots(bet); break;
+        case 'battle': startBattle(bet); break;
     }
+}
+// --- COIN FLIP LOGIC ---
+function handleCoinFlip(bet) {
+    const win = Math.random() < 0.5;
+    const targetRotation = win ? Math.PI * 12 : Math.PI * 13; // Ends on Heads or Tails
 
-// DICE
-    else if(type === 'dice'){
+    gsap.to(coinMesh.rotation, {
+        y: coinMesh.rotation.y + targetRotation,
+        duration: 2,
+        ease: "power3.out",
+        onComplete: () => {
+            finalize(win, bet, 2);
+            if(window.addLog) window.addLog(`Coin: ${win ? 'Heads' : 'Tails'}`, "text-slate-400");
+        }
+    });
+}
 
-        const result = Math.floor(Math.random()*6)+1;
+// --- DICE ROLL LOGIC ---
+function handleDiceRoll(bet) {
+    const result = Math.floor(Math.random() * 6) + 1;
+    const win = result > 3; // Win if 4, 5, or 6
 
-        gsap.to(diceMesh.rotation,{
-            x: diceMesh.rotation.x + Math.PI*4,
-            y: diceMesh.rotation.y + Math.PI*4,
-            duration:1.8,
-            ease:"power2.out",
-            onComplete:()=>{
-
-                if(result > 3){
-                    dmxBalance += bet * 2;
-                }
-
-                isPlaying = false;
-                updateUI();
-
-                alert("Dice Result: "+result);
-            }
-        });
-
-    }
-
-    // CRASH
-    else if(type === 'crash'){
-        startCrash(bet);
-    }
-
-    // SLOT
-    else if(type === 'slot'){
-        startSlots(bet);
-    }
-
-    // BATTLE
-    else if(type === 'battle'){
-        startBattle(bet);
-    }
-            }
-            
-        function startCrash(bet) {
-
-    document.getElementById('crashBtn').classList.add('hidden');
-    document.getElementById('cashoutBtn').classList.remove('hidden');
+    gsap.to(diceMesh.rotation, {
+        x: diceMesh.rotation.x + Math.PI * 6,
+        y: diceMesh.rotation.y + Math.PI * 6,
+        duration: 1.8,
+        ease: "back.out(1.7)",
+        onComplete: () => {
+            finalize(win, bet, 2);
+            if(window.addLog) window.addLog(`Dice: Rolled ${result}`, "text-slate-400");
+        }
+    });
+}
+      // --- CRASH GAME LOGIC ---
+function startCrash(bet) {
+    const crashBtn = document.getElementById('crashBtn');
+    const cashoutBtn = document.getElementById('cashoutBtn');
+    const multiplierEl = document.getElementById('crashMult');
+    
+    crashBtn.classList.add('hidden');
+    cashoutBtn.classList.remove('hidden');
 
     currentCrash = 1.0;
-
-    // random crash point
-    const limit = parseFloat((Math.random() * 5 + 1.1).toFixed(2));
-
-    document.getElementById('rocket').innerText = "🚀";
+    const crashPoint = parseFloat((Math.random() * 4.5 + 1.1).toFixed(2));
 
     crashInterval = setInterval(() => {
+        currentCrash += 0.03;
+        multiplierEl.innerText = currentCrash.toFixed(2) + "x";
 
-        currentCrash += 0.04;
-
-        document.getElementById('crashMult').innerText =
-        currentCrash.toFixed(2) + "x";
-
-        // rocket movement
+        // Rocket Animation
         gsap.to("#rocket", {
-            x: (currentCrash - 1) * 130,
-            y: -(currentCrash - 1) * 50,
-            duration: 0.1,
-            ease: "linear"
+            x: (currentCrash - 1) * 150,
+            y: -(currentCrash - 1) * 60,
+            duration: 0.1
         });
 
-        // crash check
-        if(currentCrash >= limit){
-
+        if (currentCrash >= crashPoint) {
             clearInterval(crashInterval);
-
-            sounds.explosion.play();
-
-            document.getElementById('rocket').innerText = "💥🔥";
-
-            setTimeout(()=>{
-
-                finalize(false, bet, 0);
-
-                document.getElementById('crashBtn').classList.remove('hidden');
-                document.getElementById('cashoutBtn').classList.add('hidden');
-
-                gsap.set("#rocket",{x:0,y:0});
-
-                document.getElementById('rocket').innerText = "🚀";
-
-                isPlaying = false;
-                updateUI();
-
-            },1200);
+            handleCrashExplosion(bet);
         }
-
-    },100);
+    }, 100);
 }
 
-        function cashoutCrash() {
+function handleCrashExplosion(bet) {
+    if(sounds.explosion) sounds.explosion.play();
+    document.getElementById('rocket').innerText = "💥";
+    
+    setTimeout(() => {
+        finalize(false, bet, 0);
+        resetCrashUI();
+    }, 1200);
+}
 
-    if(!isPlaying) return;
-
+function cashoutCrash() {
+    if (!isPlaying || !crashInterval) return;
     clearInterval(crashInterval);
+    finalize(true, currentBet, currentCrash);
+    resetCrashUI();
+}
 
+function resetCrashUI() {
     document.getElementById('crashBtn').classList.remove('hidden');
     document.getElementById('cashoutBtn').classList.add('hidden');
-
-    finalize(true, currentBet, currentCrash);
-
-    gsap.set("#rocket",{x:0,y:0});
-
+    gsap.set("#rocket", { x: 0, y: 0 });
     document.getElementById('rocket').innerText = "🚀";
-
-    currentCrash = 1;
-
     isPlaying = false;
-
-    updateUI();
 }
 
-        function startSlots(bet){
-
-    // reset reels
-    gsap.set("#reel1, #reel2, #reel3", {y:0});
-
-    // random symbols
-    const res = [
-        Math.floor(Math.random()*6),
-        Math.floor(Math.random()*6),
-        Math.floor(Math.random()*6)
-    ];
-
-    // spin reels
-    [1,2,3].forEach((id,i)=>{
-
-        gsap.to(`#reel${id}`,{
-            y: -2400 - (res[i]*80),
-            duration: 2 + i,
-            ease: "power2.inOut",
-
-            onComplete: ()=>{
-
-                if(id === 3){
-
-                    const win =
-                        res[0] === res[1] &&
-                        res[1] === res[2];
-
-                    finalize(win, bet, 10);
+// --- SLOT MACHINE LOGIC ---
+function startSlots(bet) {
+    const results = [Math.floor(Math.random() * 6), Math.floor(Math.random() * 6), Math.floor(Math.random() * 6)];
+    
+    [1, 2, 3].forEach((id, i) => {
+        gsap.to(`#reel${id}`, {
+            y: -2400 - (results[i] * 80),
+            duration: 2 + (i * 0.5),
+            ease: "power4.inOut",
+            onComplete: () => {
+                if (id === 3) {
+                    const win = results[0] === results[1] && results[1] === results[2];
+                    const multiplier = (results[0] === 0) ? 50 : 10; // Extra bonus for Diamonds
+                    finalize(win, bet, multiplier);
                 }
-
             }
-
         });
-
     });
-
-        }
+}            
 
         /**
  * Starts the battle simulation with betting logic
