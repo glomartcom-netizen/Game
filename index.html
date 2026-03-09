@@ -1,108 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DMX ELITE - V22.0 PRO</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMX ELITE - V22.0 PRO</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <style>
-        :root { --primary: #6366f1; --dark: #020617; }
-        body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; min-height: 100vh; overflow-x: hidden; overflow-y: auto; margin: 0; }
-        .master-card { background: linear-gradient(145deg,#0f172a,#020617); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; }
-        .btn-master { background: linear-gradient(135deg,#6366f1,#a855f7); font-weight: 800; border-radius: 12px; transition: all 0.25s; text-transform: uppercase; cursor: pointer; color: white; border: none; }
-        .lobby-card { background: linear-gradient(145deg,#0f172a,#020617); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; transition: all 0.25s ease; cursor: pointer; text-align: center; padding: 20px; }
-        .lobby-card:hover { border-color: #6366f1; transform: translateY(-5px); box-shadow: 0 5px 20px rgba(99,102,241,0.3); }
-        .game-screen { display: none; width: 100%; min-height: 500px; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #1e293b 0%, #020617 100%); border-radius: 20px; position: relative; }
-        .active-selection { border: 2px solid #6366f1!important; background: rgba(99,102,241,0.3)!important; }
-        #winPopup{
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    background: rgba(0,0,0,0.95);
-    border: 2px solid gold;
-    padding: 40px;
-    border-radius: 20px;
-    z-index: 1000;
-    text-align: center;
-    transition: 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
-
-    box-shadow:0 0 25px gold;
-    animation: winGlow 1s infinite alternate;
+<style>
+:root { --primary: #6366f1; --dark: #020617; }
+body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; min-height: 100vh; margin:0; overflow-x:hidden; overflow-y:auto; }
+.master-card { background: linear-gradient(145deg,#0f172a,#020617); backdrop-filter: blur(25px); border:1px solid rgba(255,255,255,0.06); border-radius:16px; cursor:pointer; }
+.btn-master { background: linear-gradient(135deg,#6366f1,#a855f7); font-weight:800; border-radius:12px; transition: all 0.25s; text-transform: uppercase; cursor:pointer; color:white; border:none; }
+.lobby-card { background: linear-gradient(145deg,#0f172a,#020617); border:1px solid rgba(255,255,255,0.08); border-radius:16px; transition: all 0.25s ease; cursor:pointer; text-align:center; padding:20px; }
+.lobby-card:hover { border-color:#6366f1; transform:translateY(-5px); box-shadow:0 5px 20px rgba(99,102,241,0.3); }
+.game-screen { display:none; width:100%; min-height:500px; flex-direction:column; align-items:center; justify-content:center; background:radial-gradient(circle,#1e293b 0%,#020617 100%); border-radius:20px; position:relative; }
+.active-selection { border:2px solid #6366f1!important; background: rgba(99,102,241,0.3)!important; }
+#winPopup {
+    position: fixed; top:50%; left:50%; transform: translate(-50%, -50%) scale(0); 
+    background: rgba(0,0,0,0.95); border:2px solid gold; padding:40px; border-radius:20px; 
+    z-index:1000; text-align:center; transition:0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+    box-shadow:0 0 25px gold; animation: winGlow 1s infinite alternate;
 }
-
-@keyframes winGlow{
-    from{ box-shadow:0 0 20px gold; }
-    to{ box-shadow:0 0 50px gold; }
-}
-        #crashArea { width: 100%; height: 300px; position: relative; overflow: hidden; border-bottom: 2px solid #334155; }
-        #rocket { position: absolute; bottom: 20px; left: 20px; font-size: 3rem; transform: rotate(45deg); z-index: 10; }
-        .reel-hd { width: 80px; height: 100px; overflow: hidden; position: relative; background: #111; border-radius: 10px; border: 2px solid #334155; }
-    </style>
+@keyframes winGlow { from{box-shadow:0 0 20px gold;} to{box-shadow:0 0 50px gold;} }
+#crashArea { width:100%; height:300px; position:relative; overflow:hidden; border-bottom:2px solid #334155; }
+#rocket { position:absolute; bottom:20px; left:20px; font-size:3rem; transform:rotate(45deg); z-index:10; }
+.reel-hd { width:80px; height:100px; overflow:hidden; position:relative; background:#111; border-radius:10px; border:2px solid #334155; }
+</style>
 </head>
 <body class="p-2 md:p-4">
 
-    <div id="winPopup">
+    <!-- WIN POPUP -->
+<div id="winPopup">
     <h2 class="text-yellow-500 font-black text-4xl mb-2">WINNER! 🎉</h2>
     <p id="winAmountMsg" class="text-white text-2xl font-bold">0.00 DMX</p>
 </div>
 
-    <header class="max-w-7xl mx-auto mb-4 flex justify-between items-center">
-        <div>
-            <h1 class="text-xl font-black italic tracking-tighter">DMX <span class="text-indigo-500">V22.0 PRO</span></h1>
-            <p class="text-[9px] text-slate-500 font-bold uppercase">System Status: <span class="text-green-400">Stable</span></p>
+<!-- HEADER -->
+<header class="max-w-7xl mx-auto mb-4 flex justify-between items-center">
+    <div>
+        <h1 class="text-xl font-black italic tracking-tighter">DMX <span class="text-indigo-500">V22.0 PRO</span></h1>
+        <p class="text-[9px] text-slate-500 font-bold uppercase">System Status: <span class="text-green-400">Stable</span></p>
+    </div>
+    <div class="flex gap-2">
+        <button onclick="toggleAmbience()" id="muteBtn" class="master-card px-3 py-1 text-[10px]">🔈 SOUND: OFF</button>
+        <div class="master-card px-4 py-1 text-right">
+            <div id="dmxGame" class="text-xs font-bold text-indigo-400">500.00 DMX</div>
         </div>
-        <div class="flex gap-2">
-            <button onclick="toggleAmbience()" id="muteBtn" class="master-card px-3 py-1 text-[10px]">🔈 SOUND: OFF</button>
-            <div class="master-card px-4 py-1 text-right">
-                <div id="dmxGame" class="text-xs font-bold text-indigo-400">500.00 DMX</div>
+        <button onclick="connectWallet()" id="connectBtn" class="btn-master px-4 py-2 text-[10px]">CONNECT WALLET</button>
+    </div>
+</header>
+
+<!-- MAIN LOBBY -->
+<main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <!-- Sidebar -->
+    <div class="lg:col-span-3 space-y-4">
+        <section class="master-card p-4">
+            <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-2"><span>BET AMOUNT</span><span id="betValue" class="text-indigo-400">10 DMX</span></div>
+            <input id="betAmount" type="range" min="10" max="1000" step="10" value="10" oninput="updateUI()" class="w-full h-1 bg-slate-800 rounded-lg appearance-none mb-4">
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="walletAction('Deposit')" class="bg-green-600/20 border border-green-500/50 p-2 rounded-lg text-[10px] font-bold hover:bg-green-500/40">DEPOSIT</button>
+                <button onclick="walletAction('Withdraw')" class="bg-indigo-600/20 border border-indigo-500/50 p-2 rounded-lg text-[10px] font-bold hover:bg-indigo-500/40">WITHDRAW</button>
             </div>
-            <button onclick="connectWallet()" id="connectBtn" class="btn-master px-4 py-2 text-[10px]">CONNECT WALLET</button>
-        </div>
-    </header>
+        </section>
+        <section class="master-card p-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[10px] text-slate-500 font-bold uppercase">Referral Link</p>
+                <span class="text-[9px] text-green-400 font-bold">5% EARN</span>
+            </div>
+            <div class="bg-black/40 p-2 rounded text-[10px] text-indigo-300 break-all mb-3 text-center border border-white/5" id="refLink">Connect wallet to activate</div>
+            <button onclick="walletAction('Claim')" class="btn-master w-full py-2 text-[10px]">CLAIM REWARDS</button>
+        </section>
+        <section class="master-card p-4 h-[200px] flex flex-col">
+            <p class="text-[10px] font-bold text-indigo-500 uppercase mb-2">Live Activity</p>
+            <div id="liveFeed" class="flex-1 overflow-y-auto space-y-1 text-[9px] font-mono"></div>
+        </section>
+    </div>
 
-    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div class="lg:col-span-3 space-y-4">
-            <section class="master-card p-4">
-                <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-2"><span>BET AMOUNT</span><span id="betValue" class="text-indigo-400">10 DMX</span></div>
-                <input id="betAmount" type="range" min="10" max="1000" step="10" value="10" oninput="updateUI()" class="w-full h-1 bg-slate-800 rounded-lg appearance-none mb-4">
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="walletAction('Deposit')" class="bg-green-600/20 border border-green-500/50 p-2 rounded-lg text-[10px] font-bold hover:bg-green-500/40">DEPOSIT</button>
-                    <button onclick="walletAction('Withdraw')" class="bg-indigo-600/20 border border-indigo-500/50 p-2 rounded-lg text-[10px] font-bold hover:bg-indigo-500/40">WITHDRAW</button>
-                </div>
-            </section>
-
-            <section class="master-card p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <p class="text-[10px] text-slate-500 font-bold uppercase">Referral Link</p>
-                    <span class="text-[9px] text-green-400 font-bold">5% EARN</span>
-                </div>
-                <div class="bg-black/40 p-2 rounded text-[10px] text-indigo-300 break-all mb-3 text-center border border-white/5" id="refLink">
-                    Connect wallet to activate
-                </div>
-                <button onclick="walletAction('Claim')" class="btn-master w-full py-2 text-[10px]">CLAIM REWARDS</button>
-            </section>
-
-            <section class="master-card p-4 h-[200px] flex flex-col">
-                <p class="text-[10px] font-bold text-indigo-500 uppercase mb-2">Live Activity</p>
-                <div id="liveFeed" class="flex-1 overflow-y-auto space-y-1 text-[9px] font-mono"></div>
-            </section>
+    <!-- Lobby Games -->
+    <div class="lg:col-span-9">
+        <div id="lobbyScreen" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div onclick="openGame('coin')" class="lobby-card">🪙<p class="text-[10px] font-bold mt-2">COIN FLIP</p></div>
+            <div onclick="openGame('slot')" class="lobby-card">🎰<p class="text-[10px] font-bold mt-2">SLOTS</p></div>
+            <div onclick="openGame('crash')" class="lobby-card">🚀<p class="text-[10px] font-bold mt-2">CRASH</p></div>
+            <div onclick="openGame('dice')" class="lobby-card">🎲<p class="text-[10px] font-bold mt-2">DICE</p></div>
+            <div onclick="openGame('battle')" class="lobby-card">⚔️<p class="text-[10px] font-bold mt-2">BATTLE</p></div>
         </div>
 
-        <div class="lg:col-span-9">
-            <div id="lobbyScreen" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div onclick="openGame('coin')" class="lobby-card">🪙<p class="text-[10px] font-bold mt-2">COIN FLIP</p></div>
-                <div onclick="openGame('slot')" class="lobby-card">🎰<p class="text-[10px] font-bold mt-2">SLOTS</p></div>
-                <div onclick="openGame('crash')" class="lobby-card">🚀<p class="text-[10px] font-bold mt-2">CRASH</p></div>
-                <div onclick="openGame('dice')" class="lobby-card">🎲<p class="text-[10px] font-bold mt-2">DICE</p></div>
-                <div onclick="openGame('battle')" class="lobby-card">⚔️<p class="text-[10px] font-bold mt-2">BATTLE</p></div>
-                
                 <div class="lobby-card opacity-30">📉<p class="text-[9px] mt-2">HI-LO</p></div>
                 <div class="lobby-card opacity-30">⚪<p class="text-[9px] mt-2">PLINKO</p></div>
                 <div class="lobby-card opacity-30">🎡<p class="text-[9px] mt-2">WHEEL</p></div>
@@ -115,74 +103,76 @@
                 <div class="lobby-card opacity-30">🎨<p class="text-[9px] mt-2">COLOR BET</p></div>
             </div>
 
-            <div id="coinGame" class="game-screen">
-                <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
-                <div id="coinCanvas" class="h-48 w-full"></div>
-                <div class="flex gap-4 my-6">
-                    <button onclick="setSide('coin', 'Heads')" id="coinHeads" class="px-8 py-3 master-card active-selection font-bold">HEADS</button>
-                    <button onclick="setSide('coin', 'Tails')" id="coinTails" class="px-8 py-3 master-card font-bold">TAILS</button>
-                </div>
-                <button onclick="playGame('coin')" class="btn-master w-64 py-4">FLIP COIN</button>
+             <!-- Game Screens -->
+        <div id="coinGame" class="game-screen">
+            <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
+            <div id="coinCanvas" class="h-48 w-full"></div>
+            <div class="flex gap-4 my-6">
+                <button onclick="setSide('coin', 'Heads')" id="coinHeads" class="px-8 py-3 master-card active-selection font-bold">HEADS</button>
+                <button onclick="setSide('coin', 'Tails')" id="coinTails" class="px-8 py-3 master-card font-bold">TAILS</button>
             </div>
+            <button onclick="playGame('coin')" class="btn-master w-64 py-4">FLIP COIN</button>
+        </div>
 
-            <div id="diceGame" class="game-screen">
-                <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
-                <div id="diceCanvas" class="h-48 w-full"></div>
-                <div class="grid grid-cols-6 gap-2 my-6">
-                    <button onclick="setSide('dice', 1)" id="dice1" class="p-4 master-card active-selection text-2xl">⚀</button>
-                    <button onclick="setSide('dice', 2)" id="dice2" class="p-4 master-card text-2xl">⚁</button>
-                    <button onclick="setSide('dice', 3)" id="dice3" class="p-4 master-card text-2xl">⚂</button>
-                    <button onclick="setSide('dice', 4)" id="dice4" class="p-4 master-card text-2xl">⚃</button>
-                    <button onclick="setSide('dice', 5)" id="dice5" class="p-4 master-card text-2xl">⚄</button>
-                    <button onclick="setSide('dice', 6)" id="dice6" class="p-4 master-card text-2xl">⚅</button>
-                </div>
-                <button onclick="playGame('dice')" class="btn-master w-64 py-4">ROLL DICE</button>
+        <div id="diceGame" class="game-screen">
+            <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
+            <div id="diceCanvas" class="h-48 w-full"></div>
+            <div class="grid grid-cols-6 gap-2 my-6">
+                <button onclick="setSide('dice', 1)" id="dice1" class="p-4 master-card active-selection text-2xl">⚀</button>
+                <button onclick="setSide('dice', 2)" id="dice2" class="p-4 master-card text-2xl">⚁</button>
+                <button onclick="setSide('dice', 3)" id="dice3" class="p-4 master-card text-2xl">⚂</button>
+                <button onclick="setSide('dice', 4)" id="dice4" class="p-4 master-card text-2xl">⚃</button>
+                <button onclick="setSide('dice', 5)" id="dice5" class="p-4 master-card text-2xl">⚄</button>
+                <button onclick="setSide('dice', 6)" id="dice6" class="p-4 master-card text-2xl">⚅</button>
             </div>
+            <button onclick="playGame('dice')" class="btn-master w-64 py-4">ROLL DICE</button>
+        </div>
 
-            <div id="crashGame" class="game-screen">
-                <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
-                <div id="crashMult" class="text-7xl font-black text-indigo-500 mb-2">1.00x</div>
-                <div id="crashArea"><div id="rocket">🚀</div></div>
-                <div class="mt-6 flex flex-col items-center">
-                    <button id="crashBtn" onclick="playGame('crash')" class="btn-master w-64 py-4">START ENGINE</button>
-                    <button id="cashoutBtn" onclick="cashoutCrash()" class="hidden bg-green-500 w-64 py-4 rounded-xl font-black text-white hover:scale-105 transition">CASHOUT NOW</button>
-                </div>
-            </div>
-
-            <div id="slotGame" class="game-screen">
-                <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
-                <div class="flex gap-4 mb-8 bg-black/50 p-6 rounded-3xl border-4 border-slate-700">
-                    <div class="reel-hd"><div id="reel1" class="absolute w-full"></div></div>
-                    <div class="reel-hd"><div id="reel2" class="absolute w-full"></div></div>
-                    <div class="reel-hd"><div id="reel3" class="absolute w-full"></div></div>
-                </div>
-                <button onclick="playGame('slot')" class="btn-master w-64 py-4">SPIN</button>
-            </div>
-
-            <div id="battleGame" class="game-screen">
-                <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
-                <div class="flex gap-4 mb-6">
-                    <button onclick="setSide('battle', 'P1')" id="battleP1" class="p-8 master-card active-selection text-5xl">⚔️</button>
-                    <div class="flex items-center text-2xl font-black">VS</div>
-                    <button onclick="setSide('battle', 'P2')" id="battleP2" class="p-8 master-card text-5xl">🛡️</button>
-                </div>
-                <button onclick="playGame('battle')" class="btn-master w-64 py-4">FIGHT</button>
+        <div id="crashGame" class="game-screen">
+            <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
+            <div id="crashMult" class="text-7xl font-black text-indigo-500 mb-2">1.00x</div>
+            <div id="crashArea"><div id="rocket">🚀</div></div>
+            <div class="mt-6 flex flex-col items-center">
+                <button id="crashBtn" onclick="playGame('crash')" class="btn-master w-64 py-4">START ENGINE</button>
+                <button id="cashoutBtn" onclick="cashoutCrash()" class="hidden bg-green-500 w-64 py-4 rounded-xl font-black text-white hover:scale-105 transition">CASHOUT NOW</button>
             </div>
         </div>
-    </main>
 
-    <script>
-        let dmxBalance = 500, isPlaying = false, currentCrash = 1.0, currentBet = 0;
-        let selectedSides = { coin: 'Heads', dice: 1, battle: 'P1' };
-        let coinMesh, diceMesh, crashInterval, isWalletConnected = false;
+        <div id="slotGame" class="game-screen">
+            <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
+            <div class="flex gap-4 mb-8 bg-black/50 p-6 rounded-3xl border-4 border-slate-700">
+                <div class="reel-hd"><div id="reel1" class="absolute w-full"></div></div>
+                <div class="reel-hd"><div id="reel2" class="absolute w-full"></div></div>
+                <div class="reel-hd"><div id="reel3" class="absolute w-full"></div></div>
+            </div>
+            <button onclick="playGame('slot')" class="btn-master w-64 py-4">SPIN</button>
+        </div>
 
-        const sounds = {
-            win: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-casino-bling-notification-229.mp3'] }),
-            lose: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3'] }),
-            explosion: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-explosive-impact-boom-2580.mp3'] }),
-            ambience: new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-casino-slot-machine-room-ambience-1982.mp3'], loop: true, volume: 0.1 })
-        };
+        <div id="battleGame" class="game-screen">
+            <button onclick="backToLobby()" class="absolute top-4 left-4 text-xs font-bold text-indigo-400">← EXIT</button>
+            <div class="flex gap-4 mb-6">
+                <button onclick="setSide('battle', 'P1')" id="battleP1" class="p-8 master-card active-selection text-5xl">⚔️</button>
+                <div class="flex items-center text-2xl font-black">VS</div>
+                <button onclick="setSide('battle', 'P2')" id="battleP2" class="p-8 master-card text-5xl">🛡️</button>
+            </div>
+            <button onclick="playGame('battle')" class="btn-master w-64 py-4">FIGHT</button>
+            <p id="battleStatus" class="text-white font-bold text-xl mt-4"></p>
+        </div>
+    </div>
+</main>
 
+<script>
+        // ------------------ GLOBAL VARIABLES ------------------
+let dmxBalance = 500, isPlaying = false, currentCrash = 1, currentBet = 0;
+let selectedSides = { coin:'Heads', dice:1, battle:'P1' };
+let coinMesh, diceMesh, crashInterval, isWalletConnected = false;
+
+const sounds = {
+    win: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-casino-bling-notification-229.mp3']}),
+    lose: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3']}),
+    explosion: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-explosive-impact-boom-2580.mp3']}),
+    ambience: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-casino-slot-machine-room-ambience-1982.mp3'], loop:true, volume:0.1})
+};
         // Mobile Sound Unlock Fix - Important for Tablet
         const unlockAudio = () => {
             if(!sounds.ambience.playing()) {
@@ -195,23 +185,43 @@
         document.addEventListener('click', unlockAudio);
         document.addEventListener('touchstart', unlockAudio);
 
-        function updateUI() {
-            document.getElementById('dmxGame').innerText = dmxBalance.toFixed(2) + " DMX";
-            document.getElementById('betValue').innerText = document.getElementById('betAmount').value + " DMX";
-        }
+        // ------------------ INIT ------------------
+function updateUI() {
+    document.getElementById('dmxGame').innerText = dmxBalance.toFixed(2) + " DMX";
+    document.getElementById('betValue').innerText = document.getElementById('betAmount').value + " DMX";
+}
 
-        function init3D() {
-            const loader = new THREE.TextureLoader();
-            const createScene = (id) => {
-                const sc = new THREE.Scene();
-                const re = new THREE.WebGLRenderer({alpha:true, antialias:true});
-                re.setSize(300, 150); document.getElementById(id).appendChild(re.domElement);
-                const ca = new THREE.PerspectiveCamera(45, 2/1, 0.1, 100); ca.position.z = 5;
-                sc.add(new THREE.AmbientLight(0xffffff, 2.5));
-                return {sc, re, ca};
-            };
+// ------------------ WALLET ------------------
+function connectWallet() {
+    isWalletConnected = true;
+    document.getElementById('connectBtn').innerText = "0x7a2...f4d1";
+    document.getElementById('refLink').innerText = "https://dmxelite.pro/ref?id=7a2f4d1";
+    addLog("Wallet Connected","text-indigo-400");
+}
+function walletAction(type){
+    if(!isWalletConnected) return alert("Connect wallet first");
+    alert(`${type} protocol initiated. Waiting for chain confirmation...`);
+}
+    
+        // ------------------ GAME UI ------------------
+function openGame(g){ document.getElementById('lobbyScreen').style.display='none'; document.getElementById(g+'Game').style.display='flex'; }
+function backToLobby(){ document.getElementById('lobbyScreen').style.display='grid'; document.querySelectorAll('.game-screen').forEach(s=>s.style.display='none'); }
+function setSide(g,v){ selectedSides[g]=v; document.querySelectorAll(`[id^="${g}"]`).forEach(b=>b.classList.remove('active-selection')); document.getElementById(g+v).classList.add('active-selection'); }
+function toggleAmbience(){ sounds.ambience.playing()? (sounds.ambience.stop(),document.getElementById('muteBtn').innerText="🔈 SOUND: OFF"):(sounds.ambience.play(),document.getElementById('muteBtn').innerText="🔊 SOUND: ON"); }
+function addLog(m,c){ const f=document.getElementById('liveFeed'); const d=document.createElement('div'); d.className=c; d.innerText=`[${new Date().toLocaleTimeString()}] ${m}`; f.prepend(d); }
 
-            // ============================
+// ------------------ 3D INIT ------------------
+function init3D(){
+    const loader = new THREE.TextureLoader();
+    const createScene = id=>{
+        const sc = new THREE.Scene();
+        const re = new THREE.WebGLRenderer({alpha:true,antialias:true});
+        re.setSize(300,150); document.getElementById(id).appendChild(re.domElement);
+        const ca = new THREE.PerspectiveCamera(45,2/1,0.1,100); ca.position.z=5;
+        sc.add(new THREE.AmbientLight(0xffffff,2.5));
+        return {sc,re,ca};
+    };
+
 // REAL DMX COIN ENGINE
 // ============================
 
@@ -619,14 +629,17 @@ animateDice();
         }
 
         function openGame(g) { 
-            document.getElementById('lobbyScreen').style.display = 'none'; 
-            document.getElementById(g + 'Game').style.display = 'flex'; 
-        }
+    document.getElementById('lobbyScreen').style.display = 'none';
+    // Hide all other game screens
+    document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none');
+    // Show selected game
+    document.getElementById(g + 'Game').style.display = 'flex';
+}
         
         function backToLobby() { 
-            document.getElementById('lobbyScreen').style.display = 'grid'; 
-            document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none'); 
-        }
+    document.getElementById('lobbyScreen').style.display = 'grid';
+    document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none');
+}
 
         function setSide(g, v) { 
             selectedSides[g] = v; 
