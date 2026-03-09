@@ -57,8 +57,8 @@ body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; 
 
 <!-- MAIN LOBBY -->
 <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4">
-    <!-- Sidebar -->
     <div class="lg:col-span-3 space-y-4">
+        
         <section class="master-card p-4">
             <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-2"><span>BET AMOUNT</span><span id="betValue" class="text-indigo-400">10 DMX</span></div>
             <input id="betAmount" type="range" min="10" max="1000" step="10" value="10" oninput="updateUI()" class="w-full h-1 bg-slate-800 rounded-lg appearance-none mb-4">
@@ -67,19 +67,26 @@ body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; 
                 <button onclick="walletAction('Withdraw')" class="bg-indigo-600/20 border border-indigo-500/50 p-2 rounded-lg text-[10px] font-bold hover:bg-indigo-500/40">WITHDRAW</button>
             </div>
         </section>
+
         <section class="master-card p-4">
             <div class="flex items-center justify-between mb-2">
                 <p class="text-[10px] text-slate-500 font-bold uppercase">Referral Link</p>
                 <span class="text-[9px] text-green-400 font-bold">5% EARN</span>
             </div>
-            <div class="bg-black/40 p-2 rounded text-[10px] text-indigo-300 break-all mb-3 text-center border border-white/5" id="refLink">Connect wallet to activate</div>
+            
+            <div id="refLink" class="bg-black/40 p-2 rounded text-[10px] text-indigo-300 break-all mb-3 text-center border border-white/5 cursor-pointer hover:bg-black/60 transition" onclick="copyRefLink()">
+                Connect wallet to activate
+            </div>
+
             <button onclick="walletAction('Claim')" class="btn-master w-full py-2 text-[10px]">CLAIM REWARDS</button>
         </section>
+
         <section class="master-card p-4 h-[200px] flex flex-col">
             <p class="text-[10px] font-bold text-indigo-500 uppercase mb-2">Live Activity</p>
             <div id="liveFeed" class="flex-1 overflow-y-auto space-y-1 text-[9px] font-mono"></div>
         </section>
     </div>
+
 
     <!-- Lobby Games -->
     <div class="lg:col-span-9">
@@ -225,31 +232,36 @@ window.syncWallet = async () => {
         const isConnected = modal.getIsConnected();
         const provider = modal.getWalletProvider();
         
+        // Target the referral element
+        const refLinkEl = document.getElementById('refLink');
+        
         if (isConnected && provider) {
             const ethersProvider = new ethers.providers.Web3Provider(provider);
             const signer = ethersProvider.getSigner();
             const address = await signer.getAddress();
             
-            // Update Global State
+            // 1. Update Global State
             window.isWalletConnected = true;
             window.userAddress = address;
             
-            // Update UI Elements
+            // 2. Update the UI
+            if (refLinkEl) {
+                // Generates link using the current domain + the user's address
+                const referralUrl = `${window.location.origin}/ref?id=${address}`;
+                refLinkEl.innerText = referralUrl;
+                refLinkEl.classList.add('text-green-400'); // Visual feedback
+            }
+
+            // Update Connection Button
             const shortAddr = address.substring(0, 6) + "..." + address.substring(address.length - 4);
-            const connectBtn = document.getElementById('connectBtn');
-            const refLink = document.getElementById('refLink');
-            
-            if (connectBtn) connectBtn.innerText = shortAddr;
-            if (refLink) refLink.innerText = `${window.location.origin}/ref?id=${address.substring(2, 10)}`;
-            
-            if (window.addLog) window.addLog("System: Wallet Synced (" + shortAddr + ")", "text-indigo-400");
+            document.getElementById('connectBtn').innerText = shortAddr;
+
         } else {
-            window.isWalletConnected = false;
-            const connectBtn = document.getElementById('connectBtn');
-            if (connectBtn) connectBtn.innerText = "CONNECT WALLET";
+            // Reset if disconnected
+            if (refLinkEl) refLinkEl.innerText = "Connect wallet to activate";
         }
     } catch (error) {
-        console.error("Wallet Sync Error:", error);
+        console.error("Referral Sync Error:", error);
     }
 };
 
@@ -710,6 +722,27 @@ animateDice();
                 document.getElementById('muteBtn').innerText = "🔊 SOUND: ON";
             }
         }
+
+        // --- ADD THIS NEW FUNCTION HERE ---
+function copyRefLink() {
+    const linkElement = document.getElementById('refLink');
+    const linkText = linkElement ? linkElement.innerText : "";
+
+    // Check if the link is generated (contains http)
+    if (linkText.includes('http')) {
+        navigator.clipboard.writeText(linkText).then(() => {
+            // Update the live activity log in the sidebar
+            if (window.addLog) {
+                window.addLog("System: Referral link copied successfully", "text-green-400");
+            }
+            alert("Copied to clipboard!");
+        }).catch(err => {
+            console.error('Action failed: ', err);
+        });
+    } else {
+        alert("Please connect your wallet first!");
+    }
+            }
 
         window.onload = () => {
             init3D();
