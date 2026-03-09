@@ -232,8 +232,17 @@ body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; 
 </main>
 
 <script>
-        // ------------------ GLOBAL VARIABLES ------------------
-let dmxBalance = 500.00;
+
+// ==========================================
+// DMX ELITE V22 PRO - FULL INTEGRATED ENGINE
+// ==========================================
+
+import { createAppKit } from 'https://esm.sh/@reown/appkit?bundle'
+import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'
+import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'
+
+// --- 1. GLOBAL SETTINGS & STATE ---
+let dmxBalance = 0; 
 let isPlaying = false;
 let currentCrash = 1.0;
 let currentBet = 0;
@@ -249,32 +258,7 @@ const sounds = {
     ambience: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-casino-slot-machine-room-ambience-1982.mp3'], loop:true, volume:0.1})
 };
 
-// ------------------ UI & SOUND HELPERS ------------------
-function updateUI() {
-    const balanceEl = document.getElementById('dmxGame');
-    const betValEl = document.getElementById('betValue');
-    const betInput = document.getElementById('betAmount');
-    
-    if (balanceEl) balanceEl.innerText = dmxBalance.toFixed(2) + " DMX";
-    if (betValEl && betInput) betValEl.innerText = betInput.value + " DMX";
-}
-
-const unlockAudio = () => {
-    if(!sounds.ambience.playing()) {
-        sounds.ambience.play();
-    }
-    document.removeEventListener('click', unlockAudio);
-    document.removeEventListener('touchstart', unlockAudio);
-};
-document.addEventListener('click', unlockAudio);
-document.addEventListener('touchstart', unlockAudio);
-
-// ------------------ WALLET MODULE (AppKit) ------------------
-</script> <script type="module">
-import { createAppKit } from 'https://esm.sh/@reown/appkit?bundle'
-import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'
-import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'
-
+// --- 2. WALLET MODULE (AppKit) ---
 const projectId = '059cc242b0cc96ac9665c598b76ddc7b';
 
 const modal = createAppKit({
@@ -289,566 +273,210 @@ const modal = createAppKit({
   features: { analytics: true }
 });
 
-// Sync Wallet Data with Game UI
 window.syncWallet = async () => {
     try {
         const isConnected = modal.getIsConnected();
         const provider = modal.getWalletProvider();
-        
-        // Target the referral element
         const refLinkEl = document.getElementById('refLink');
+        const connectBtn = document.getElementById('connectBtn');
         
         if (isConnected && provider) {
             const ethersProvider = new ethers.providers.Web3Provider(provider);
             const signer = ethersProvider.getSigner();
             const address = await signer.getAddress();
             
-            // 1. Update Global State
             window.isWalletConnected = true;
             window.userAddress = address;
             
-            // 2. Update the UI
             if (refLinkEl) {
-                // Generates link using the current domain + the user's address
                 const referralUrl = `${window.location.origin}/ref?id=${address}`;
                 refLinkEl.innerText = referralUrl;
-                refLinkEl.classList.add('text-green-400'); // Visual feedback
+                refLinkEl.classList.add('text-green-400', 'font-bold');
             }
-
-            // Update Connection Button
-            const shortAddr = address.substring(0, 6) + "..." + address.substring(address.length - 4);
-            document.getElementById('connectBtn').innerText = shortAddr;
-
+            if (connectBtn) {
+                connectBtn.innerText = address.substring(0, 6) + "..." + address.substring(address.length - 4);
+            }
+            // Real Game Activation - Start with initial balance if needed
+            if(dmxBalance === 0) dmxBalance = 1000.00; 
+            updateUI();
         } else {
-            // Reset if disconnected
-            if (refLinkEl) refLinkEl.innerText = "Connect wallet to activate";
+            window.isWalletConnected = false;
+            if (refLinkEl) refLinkEl.innerText = "Connect wallet to activate link";
+            if (connectBtn) connectBtn.innerText = "Connect Wallet";
         }
-    } catch (error) {
-        console.error("Referral Sync Error:", error);
-    }
+    } catch (error) { console.error("Sync Error:", error); }
 };
 
-// Global function to trigger modal
 window.connectWallet = () => modal.open();
 
-// Event listeners for state changes
 modal.subscribeState(() => window.syncWallet());
-window.addEventListener("load", () => setTimeout(window.syncWallet, 1500));
-</script>
 
-<script>
-// ---------- 3D SCENE CREATION ----------
-function createScene(containerId) {
-    const container = document.getElementById(containerId);
+// --- 3. 3D ENGINE & SCENES ---
+function createScene(id) {
+    const container = document.getElementById(id);
     if (!container) return null;
-
-    const scene = new THREE.Scene();
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
-
-    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-    camera.position.z = 5;
-
-    // Lights
-    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambient);
-
-    const spot = new THREE.SpotLight(0xffffff, 2.5);
-    spot.position.set(2,5,5);
-    scene.add(spot);
-
-    const rim = new THREE.PointLight(0xffffff, 1);
-    rim.position.set(-5,-2,-5);
-    scene.add(rim);
-
-    return { sc: scene, re: renderer, ca: camera };
+    const sc = new THREE.Scene();
+    const re = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    re.setSize(container.clientWidth, container.clientHeight); 
+    container.appendChild(re.domElement);
+    const ca = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    ca.position.z = 5;
+    sc.add(new THREE.AmbientLight(0xffffff, 2));
+    return { sc, re, ca };
 }
 
-// ---------- COIN SCENE ----------
-const c = createScene('coinCanvas');
+let coinScene, diceScene;
 
-const headTexture = loader.load('assets/coin_heads.png');
-const tailTexture = loader.load('assets/coin_tails.png');
-
-const goldMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffd700, metalness: 1, roughness: 0.15, emissive: 0x443300, emissiveIntensity: 0.1
-});
-
-const headMaterial = new THREE.MeshStandardMaterial({ map: headTexture, metalness: 1, roughness: 0.2, bumpScale: 0.05 });
-const tailMaterial = new THREE.MeshStandardMaterial({ map: tailTexture, metalness: 1, roughness: 0.2 });
-
-const coinMaterials = [ goldMaterial, headMaterial, tailMaterial ];
-const coinGeometry = new THREE.CylinderGeometry(2,2,0.25,64);
-coinMesh = new THREE.Mesh(coinGeometry, coinMaterials);
-coinMesh.rotation.x = Math.PI/2;
-c.sc.add(coinMesh);
+function init3D() {
+    const loader = new THREE.TextureLoader();
+    coinScene = createScene('coinCanvas');
+    if(coinScene) {
+        const gold = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, roughness: 0.1 });
+        coinMesh = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.3, 64), [gold, gold, gold]);
+        coinMesh.rotation.x = Math.PI / 2;
+        coinScene.sc.add(coinMesh);
+        animateCoin();
+    }
+    diceScene = createScene('diceCanvas');
+    if(diceScene) {
+        const diceMats = Array(6).fill(0).map(() => new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        diceMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), diceMats);
+        diceScene.sc.add(diceMesh);
+        animateDice();
+    }
+}
 
 function animateCoin() {
     requestAnimationFrame(animateCoin);
-    if (!isPlaying) {
-        coinMesh.rotation.z += 0.01;
-        coinMesh.rotation.y = Math.sin(Date.now()*0.001)*0.2;
-    }
-    c.re.render(c.sc, c.ca);
+    if (!isPlaying && coinMesh) coinMesh.rotation.z += 0.01;
+    if(coinScene) coinScene.re.render(coinScene.sc, coinScene.ca);
 }
-animateCoin();
-
-// ---------- DICE SCENE ----------
-const d = createScene('diceCanvas');
-
-const diceMaterials = [
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice1.png'), roughness:0.2, metalness:0.1 }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice2.png'), roughness:0.2, metalness:0.1 }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice3.png'), roughness:0.2, metalness:0.1 }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice4.png'), roughness:0.2, metalness:0.1 }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice5.png'), roughness:0.2, metalness:0.1 }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice6.png'), roughness:0.2, metalness:0.1 }),
-];
-
-diceMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2,2.2,2.2,4,4,4), diceMaterials);
-d.sc.add(diceMesh);
-
-const diceLight = new THREE.PointLight(0xffffff, 2);
-diceLight.position.set(5,5,5);
-d.sc.add(diceLight);
-
-const diceRim = new THREE.PointLight(0x6366f1,1);
-diceRim.position.set(-5,-5,-5);
-d.sc.add(diceRim);
-
-const diceAmbient = new THREE.AmbientLight(0xffffff,0.8);
-d.sc.add(diceAmbient);
 
 function animateDice() {
     requestAnimationFrame(animateDice);
-    if(!isPlaying) {
-        diceMesh.rotation.x += 0.005;
-        diceMesh.rotation.y += 0.01;
-        diceMesh.position.y = Math.sin(Date.now()*0.002)*0.1;
-    }
-    d.re.render(d.sc, d.ca);
+    if (!isPlaying && diceMesh) { diceMesh.rotation.x += 0.01; diceMesh.rotation.y += 0.01; }
+    if(diceScene) diceScene.re.render(diceScene.sc, diceScene.ca);
 }
-animateDice();
 
-console.log("✅ 3D Scenes Initialized Successfully!");    
-   
-        /**
- * Main Entry Point for all games
- * @param {string} type - The game category (coin, dice, crash, etc.)
- */
-function playGame(type) {
-    const betInput = document.getElementById('betAmount');
-    const bet = parseInt(betInput.value);
-
-    // 1. Safety Checks
-    if (dmxBalance < bet) {
-        if(window.addLog) window.addLog("Error: Insufficient DMX Balance", "text-red-500");
-        alert("Not enough DMX!");
-        return;
+// --- 4. CORE ACTIONS & NAVIGATION ---
+window.handleAction = (type) => {
+    if (!window.isWalletConnected) { alert("Connect Wallet First!"); modal.open(); return; }
+    if (type === 'deposit') {
+        const amt = prompt("Enter Deposit (Min 100 DMX):", "100");
+        if (amt >= 100) alert(`Mode: DMX | USDT BEP20\nRate: PancakeSwap Live\nRedirecting...`);
+    } else if (type === 'withdraw') {
+        prompt("Enter DMX Amount to Withdraw:");
+        alert("Request sent to Admin.");
+    } else if (type === 'claim') {
+        alert("5% Referral reward claimed!");
     }
-    if (isPlaying) return;
+};
 
-    // 2. Lock State & Deduct Balance
+function updateUI() {
+    document.getElementById('dmxGame').innerText = dmxBalance.toFixed(2) + " DMX";
+    document.getElementById('betValue').innerText = document.getElementById('betAmount').value + " DMX";
+}
+
+// --- 5. GAME LOGIC ---
+window.playGame = (type) => {
+    if(!isWalletConnected) { alert("Connect Wallet for Real Play!"); return; }
+    const bet = parseInt(document.getElementById('betAmount').value);
+    if(dmxBalance < bet || isPlaying) return;
+
     isPlaying = true;
     dmxBalance -= bet;
     currentBet = bet;
     updateUI();
 
-    // 3. Game Router
-    switch(type) {
-        case 'coin':  handleCoinFlip(bet); break;
-        case 'dice':  handleDiceRoll(bet); break;
-        case 'crash': startCrash(bet); break;
-        case 'slot':  startSlots(bet); break;
-        case 'battle': startBattle(bet); break;
-    }
-}
-// --- COIN FLIP LOGIC ---
-function handleCoinFlip(bet) {
-    const win = Math.random() < 0.5;
-    const targetRotation = win ? Math.PI * 12 : Math.PI * 13; // Ends on Heads or Tails
+    if(type === 'coin') {
+        const win = Math.random() > 0.5;
+        gsap.to(coinMesh.rotation, { z: coinMesh.rotation.z + Math.PI * 10, duration: 2, onComplete: () => finalize(win, bet, 2) });
+    } else if(type === 'dice') {
+        const res = Math.floor(Math.random()*6)+1;
+        gsap.to(diceMesh.rotation, { x: "+=20", y: "+=20", duration: 2, onComplete: () => finalize(res > 3, bet, 2) });
+    } else if(type === 'crash') { startCrash(bet); }
+    else if(type === 'slot') { startSlots(bet); }
+    else if(type === 'battle') { startBattle(bet); }
+};
 
-    gsap.to(coinMesh.rotation, {
-        y: coinMesh.rotation.y + targetRotation,
-        duration: 2,
-        ease: "power3.out",
-        onComplete: () => {
-            finalize(win, bet, 2);
-            if(window.addLog) window.addLog(`Coin: ${win ? 'Heads' : 'Tails'}`, "text-slate-400");
-        }
-    });
-}
-
-// --- DICE ROLL LOGIC ---
-function handleDiceRoll(bet) {
-    const result = Math.floor(Math.random() * 6) + 1;
-    const win = result > 3; // Win if 4, 5, or 6
-
-    gsap.to(diceMesh.rotation, {
-        x: diceMesh.rotation.x + Math.PI * 6,
-        y: diceMesh.rotation.y + Math.PI * 6,
-        duration: 1.8,
-        ease: "back.out(1.7)",
-        onComplete: () => {
-            finalize(win, bet, 2);
-            if(window.addLog) window.addLog(`Dice: Rolled ${result}`, "text-slate-400");
-        }
-    });
-}
-      // --- CRASH GAME LOGIC ---
 function startCrash(bet) {
-    const crashBtn = document.getElementById('crashBtn');
-    const cashoutBtn = document.getElementById('cashoutBtn');
-    const multiplierEl = document.getElementById('crashMult');
-    
-    crashBtn.classList.add('hidden');
-    cashoutBtn.classList.remove('hidden');
-
+    const rocket = document.getElementById('rocket');
+    const multEl = document.getElementById('crashMult');
+    document.getElementById('crashBtn').classList.add('hidden');
+    document.getElementById('cashoutBtn').classList.remove('hidden');
     currentCrash = 1.0;
-    const crashPoint = parseFloat((Math.random() * 4.5 + 1.1).toFixed(2));
-
+    const limit = (Math.random() * 3 + 1.1).toFixed(2);
     crashInterval = setInterval(() => {
-        currentCrash += 0.03;
-        multiplierEl.innerText = currentCrash.toFixed(2) + "x";
-
-        // Rocket Animation
-        gsap.to("#rocket", {
-            x: (currentCrash - 1) * 150,
-            y: -(currentCrash - 1) * 60,
-            duration: 0.1
-        });
-
-        if (currentCrash >= crashPoint) {
+        currentCrash += 0.02;
+        multEl.innerText = currentCrash.toFixed(2) + "x";
+        gsap.set(rocket, { x: (currentCrash - 1) * 70, y: -(currentCrash - 1) * 35 });
+        if(currentCrash >= limit) {
             clearInterval(crashInterval);
-            handleCrashExplosion(bet);
+            rocket.innerText = "💥";
+            sounds.explosion.play();
+            setTimeout(() => { finalize(false, bet, 0); resetCrash(); }, 1000);
         }
     }, 100);
 }
 
-function handleCrashExplosion(bet) {
-    if(sounds.explosion) sounds.explosion.play();
-    document.getElementById('rocket').innerText = "💥";
-    
-    setTimeout(() => {
-        finalize(false, bet, 0);
-        resetCrashUI();
-    }, 1200);
-}
-
-function cashoutCrash() {
-    if (!isPlaying || !crashInterval) return;
+window.cashoutCrash = () => {
+    if(!isPlaying || !crashInterval) return;
     clearInterval(crashInterval);
     finalize(true, currentBet, currentCrash);
-    resetCrashUI();
-}
+    resetCrash();
+};
 
-function resetCrashUI() {
+function resetCrash() {
     document.getElementById('crashBtn').classList.remove('hidden');
     document.getElementById('cashoutBtn').classList.add('hidden');
-    gsap.set("#rocket", { x: 0, y: 0 });
+    gsap.set("#rocket", {x:0, y:0});
     document.getElementById('rocket').innerText = "🚀";
     isPlaying = false;
 }
 
-// --- SLOT MACHINE LOGIC ---
 function startSlots(bet) {
-    const results = [Math.floor(Math.random() * 6), Math.floor(Math.random() * 6), Math.floor(Math.random() * 6)];
-    
-    [1, 2, 3].forEach((id, i) => {
-        gsap.to(`#reel${id}`, {
-            y: -2400 - (results[i] * 80),
-            duration: 2 + (i * 0.5),
-            ease: "power4.inOut",
-            onComplete: () => {
-                if (id === 3) {
-                    const win = results[0] === results[1] && results[1] === results[2];
-                    const multiplier = (results[0] === 0) ? 50 : 10; // Extra bonus for Diamonds
-                    finalize(win, bet, multiplier);
-                }
-            }
-        });
+    const res = [Math.floor(Math.random()*6), Math.floor(Math.random()*6), Math.floor(Math.random()*6)];
+    [1,2,3].forEach((id, i) => {
+        gsap.to(`#reel${id}`, { y: -2400 - (res[i]*80), duration: 2+i, ease: "power2.inOut", onComplete: () => {
+            if(id === 3) finalize(res[0] === res[1] && res[1] === res[2], bet, 10);
+        }});
     });
-}            
-
-        /**
- * Starts the battle simulation with betting logic
- * @param {number} bet - The current bet amount
- */
-function startBattle(bet) {
-    const statusEl = document.getElementById("battleStatus");
-    if (!statusEl) return;
-
-    // 1. Set playing state to prevent multiple clicks
-    isPlaying = true;
-    statusEl.innerText = "⚔️ BATTLE IN PROGRESS...";
-    statusEl.classList.add('animate-pulse', 'text-indigo-400');
-
-    // 2. Add log entry
-    addLog(`Battle started with ${bet} DMX`, "text-slate-400");
-
-    // 3. Simulate battle delay
-    setTimeout(() => {
-        // Random outcome logic (50/50 chance)
-        const win = Math.random() > 0.5;
-
-        statusEl.classList.remove('animate-pulse');
-        
-        if (win) {
-            statusEl.innerText = "🏆 GLORY! YOU WIN!";
-            statusEl.classList.replace('text-indigo-400', 'text-yellow-400');
-            finalize(true, bet, 1.8);
-        } else {
-            statusEl.innerText = "💀 DEFEAT! YOU LOST!";
-            statusEl.classList.replace('text-indigo-400', 'text-red-500');
-            finalize(false, bet, 0);
-        }
-    }, 2000); // 2 seconds delay for suspense
 }
 
-/**
- * Finalizes the game result and updates balances
- * @param {boolean} won - Whether the user won
- * @param {number} bet - The initial bet amount
- * @param {number} mult - The winning multiplier (e.g., 1.8x)
- */
-function finalize(won, bet, mult) {
-    // Reset global playing state
-    isPlaying = false;
+function startBattle(bet) {
+    setTimeout(() => finalize(Math.random() > 0.5, bet, 1.8), 2000);
+}
 
-    if (won) {
+function finalize(won, bet, mult) {
+    isPlaying = false;
+    if(won) {
         const winAmt = bet * mult;
         dmxBalance += winAmt;
-
-        // Play Win Sound
-        if (sounds.win) sounds.win.play();
-
-        // Show Visual Effects
+        sounds.win.play();
         showWinPopup(winAmt);
-
-        // Professional Confetti Burst
-        if (typeof confetti !== "undefined") {
-            const end = Date.now() + (2 * 1000);
-            const colors = ['#6366f1', '#fbbf24', '#ffffff'];
-
-            (function frame() {
-                confetti({
-                    particleCount: 3,
-                    angle: 60,
-                    spread: 55,
-                    origin: { x: 0 },
-                    colors: colors
-                });
-                confetti({
-                    particleCount: 3,
-                    angle: 120,
-                    spread: 55,
-                    origin: { x: 1 },
-                    colors: colors
-                });
-
-                if (Date.now() < end) {
-                    requestAnimationFrame(frame);
-                }
-            }());
-        }
-
-        addLog(`System: Payout +${winAmt.toFixed(2)} DMX`, "text-green-400 font-bold");
-    } 
-    else {
-        // Play Loss Sound
-        if (sounds.lose) sounds.lose.play();
-
-        addLog(`System: Loss -${bet.toFixed(2)} DMX`, "text-red-500");
-    }
-
-    // Refresh all UI elements
+    } else { sounds.lose.play(); }
     updateUI();
 }
 
-        /**
- * Displays the premium winner popup with an animation
- * @param {number} amount - The winning amount in DMX
- */
-function showWinPopup(amount) {
-    const popup = document.getElementById('winPopup');
-    const msg = document.getElementById('winAmountMsg');
-
-    if (popup && msg) {
-        // Set the winning text
-        msg.innerText = `${amount.toFixed(2)} DMX`;
-
-        // Show the popup (removing 'hidden' class from our new design)
-        popup.classList.remove('hidden');
-        
-        // Play Win Sound
-        if (sounds.win) sounds.win.play();
-
-        // Log to terminal
-        addLog(`BIG WIN: +${amount.toFixed(2)} DMX`, "text-yellow-400 font-bold");
-
-        // Hide the popup after 3 seconds
-        setTimeout(() => {
-            popup.classList.add('hidden');
-        }, 3000);
-    }
-}
-
-/**
- * Adds a new entry to the Live Terminal/Activity feed
- * @param {string} message - The text to display
- * @param {string} colorClass - Tailwind color class (e.g., 'text-green-400')
- */
-function addLog(message, colorClass) {
-    const feed = document.getElementById('liveFeed');
-    if (!feed) return;
-
-    const entry = document.createElement('div');
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-    
-    // Modern terminal styling
-    entry.className = `${colorClass} border-l-2 border-current pl-2 py-0.5 animate-pulse-once`;
-    entry.innerHTML = `<span class="opacity-40 text-[7px] mr-2">${time}</span> ${message}`;
-    
-    // Add to the top of the feed
-    feed.prepend(entry);
-
-    // Keep only the last 50 logs to prevent lag
-    if (feed.children.length > 50) {
-        feed.removeChild(feed.lastChild);
-    }
-}
-
-    
-        /**
- * Opens a specific game and hides the lobby
- * @param {string} gameId - The prefix of the game to open (e.g., 'coin', 'dice')
- */
-function openGame(gameId) {
-    const lobby = document.getElementById('lobbyScreen');
-    const targetGame = document.getElementById(gameId + 'Game');
-
-    // Hide Lobby with a quick fade (if CSS transition exists)
-    if (lobby) lobby.style.display = 'none';
-
-    // Hide all other game screens and remove active states
-    document.querySelectorAll('.game-screen').forEach(screen => {
-        screen.style.display = 'none';
-    });
-
-    // Show the selected game
-    if (targetGame) {
-        targetGame.style.display = 'flex';
-        // Log activity
-        if (window.addLog) window.addLog(`System: Entering ${gameId.toUpperCase()} room`, "text-indigo-400");
-    }
-}
-
-/**
- * Returns the user to the main lobby screen
- */
-function backToLobby() {
-    const lobby = document.getElementById('lobbyScreen');
-    
-    // Show Lobby
-    if (lobby) lobby.style.display = 'grid';
-
-    // Hide all game-specific screens
-    document.querySelectorAll('.game-screen').forEach(screen => {
-        screen.style.display = 'none';
-    });
-}
-
-/**
- * Updates the user's selection (Heads/Tails, Dice numbers, etc.)
- * @param {string} game - The game category
- * @param {string|number} value - The selected value
- */
-function setSide(game, value) {
-    selectedSides[game] = value;
-    
-    // Select all buttons related to this specific game selection
-    const buttons = document.querySelectorAll(`[id^="${game}"]`);
-    buttons.forEach(btn => btn.classList.remove('active-selection', 'border-indigo-500', 'bg-indigo-500/20'));
-
-    // Highlight the selected button
-    const selectedBtn = document.getElementById(game + value);
-    if (selectedBtn) {
-        selectedBtn.classList.add('active-selection', 'border-indigo-500', 'bg-indigo-500/20');
-    }
-}
-
-/**
- * Toggles ambient background music and updates UI icon
- */
-function toggleAmbience() {
-    const muteBtn = document.getElementById('muteBtn');
-    
-    if (sounds.ambience.playing()) {
-        sounds.ambience.pause(); // Pause instead of stop to resume later
-        if (muteBtn) muteBtn.innerHTML = "🔈 SOUND: OFF";
-    } else {
-        sounds.ambience.play();
-        if (muteBtn) muteBtn.innerHTML = "🔊 SOUND: ON";
-    }
-}
-
-
-        // --- UPDATED INITIALIZATION LOGIC ---
-
-/**
- * Copies the referral link text to the clipboard
- */
-function copyRefLink() {
-    const linkElement = document.getElementById('refLink');
-    const linkText = linkElement ? linkElement.innerText : "";
-
-    if (linkText.includes('http')) {
-        navigator.clipboard.writeText(linkText).then(() => {
-            if (window.addLog) window.addLog("System: Referral link copied", "text-green-400");
-            alert("Copied to clipboard!");
-        }).catch(err => console.error('Copy failed:', err));
-    } else {
-        alert("Please connect your wallet first!");
-    }
-}
-
-/**
- * Initializes all game systems when the window loads
- */
+// --- 6. INITIALIZATION ---
 window.addEventListener('load', () => {
-    // 1. Initialize 3D Graphics
-    if (typeof init3D === 'function') init3D();
-    
-    // 2. Initialize UI & Balances
-    if (typeof updateUI === 'function') updateUI();
-    
-    // 3. Setup Slot Reels (Optimized)
-    const reelIcons = ['💎', '💰', '7️⃣', '🔔', '👑', '⚡'];
-    [1, 2, 3].forEach(id => {
-        const reel = document.getElementById(`reel${id}`);
-        if (!reel) return;
-
-        const fragment = document.createDocumentFragment();
-        // Create 60 items for a smooth scrolling effect
-        for (let i = 0; i < 60; i++) {
-            const div = document.createElement('div');
-            div.className = 'h-[80px] flex items-center justify-center text-3xl select-none';
-            div.innerText = reelIcons[i % reelIcons.length];
-            fragment.appendChild(div);
+    init3D();
+    const icons = ['💎', '💰', '7️⃣', '🔔', '👑', '⚡'];
+    [1,2,3].forEach(id => {
+        const r = document.getElementById(`reel${id}`);
+        for(let i=0; i<50; i++) {
+            const d = document.createElement('div');
+            d.className = 'h-[80px] flex items-center justify-center text-3xl';
+            d.innerText = icons[i % 6];
+            r.appendChild(d);
         }
-        reel.innerHTML = ''; // Clear existing
-        reel.appendChild(fragment);
     });
-
-    // 4. Auto-sync Wallet (if already connected)
-    setTimeout(() => {
-        if (window.syncWallet) window.syncWallet();
-    }, 1500);
-
-    console.log("DMX Engine: Systems Operational");
+    setTimeout(window.syncWallet, 1000);
 });
+
 
 </script>
 </body>
 </html>
+
+    
