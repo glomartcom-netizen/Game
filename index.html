@@ -363,68 +363,91 @@ function init3D() {
 }
 
 
-// REAL DMX COIN ENGINE
+// REAL DMX COIN ENGINE (Enhanced)
 // ============================
 
-// Create scene
 const c = createScene('coinCanvas');
-
-// Texture loader
 const loader = new THREE.TextureLoader();
 
-// Load DMX coin textures
+// Load DMX textures
 const headTexture = loader.load('assets/coin_heads.png');
 const tailTexture = loader.load('assets/coin_tails.png');
 
-// Gold material for coin edge
+// Professional metallic settings for that real gold look
 const goldMaterial = new THREE.MeshStandardMaterial({
- color: 0xd4af37,
- metalness: 1,
- roughness: 0.25
+    color: 0xffd700, // Brighter gold
+    metalness: 1.0,
+    roughness: 0.15, // Smoother for better shine
+    emissive: 0x443300, // Deep gold glow
+    emissiveIntensity: 0.1
 });
 
-// Coin face materials
 const headMaterial = new THREE.MeshStandardMaterial({
- map: headTexture,
- metalness: 1,
- roughness: 0.25
+    map: headTexture,
+    metalness: 1.0,
+    roughness: 0.2,
+    bumpScale: 0.05 // Adds depth to the logo
 });
 
 const tailMaterial = new THREE.MeshStandardMaterial({
- map: tailTexture,
- metalness: 1,
- roughness: 0.25
+    map: tailTexture,
+    metalness: 1.0,
+    roughness: 0.2
 });
 
-// Cylinder materials
+// Materials: 0=side, 1=top(heads), 2=bottom(tails)
+// CylinderGeometry faces: [side, top, bottom]
 const coinMaterials = [
- goldMaterial, // edge
- goldMaterial, // edge
- headMaterial, // heads
- tailMaterial, // tails
- goldMaterial,
- goldMaterial
+    goldMaterial, // 0: Side edge
+    headMaterial, // 1: Top face (Heads)
+    tailMaterial  // 2: Bottom face (Tails)
 ];
 
-// Coin geometry
-const coinGeometry = new THREE.CylinderGeometry(2, 2, 0.35, 64);
+// Coin geometry (Radius, Radius, Height, Segments)
+const coinGeometry = new THREE.CylinderGeometry(2, 2, 0.25, 64);
 
 // Create coin
 coinMesh = new THREE.Mesh(coinGeometry, coinMaterials);
 
-// Rotate coin correctly
+// Initial Rotation to show the face
 coinMesh.rotation.x = Math.PI / 2;
-
-// Add coin to scene
 c.sc.add(coinMesh);
 
-// Lighting for real gold shine
-const light1 = new THREE.PointLight(0xffffff, 1.5);
-light1.position.set(5, 6, 5);
-c.sc.add(light1);
+// ADVANCED LIGHTING
+// Main Spotlight for highlights
+const spotLight = new THREE.SpotLight(0xffffff, 2.5);
+spotLight.position.set(2, 5, 5);
+spotLight.angle = 0.5;
+spotLight.penumbra = 1;
+c.sc.add(spotLight);
 
-const light2 = new THREE.AmbientLight(0xffffff, 0.5);
-c.sc.add(light2);
+// Rim Light to outline the gold edge
+const rimLight = new THREE.PointLight(0xffffff, 1);
+rimLight.position.set(-5, -2, -5);
+c.sc.add(rimLight);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+c.sc.add(ambient);
+
+/**
+ * Idle animation for the DMX coin
+ */
+function animateCoin() {
+    requestAnimationFrame(animateCoin);
+
+    if (!isPlaying) {
+        // Slow cinematic rotation
+        coinMesh.rotation.z += 0.01; 
+        
+        // Gentle tilting to catch the light
+        coinMesh.rotation.y = Math.sin(Date.now() * 0.001) * 0.2;
+    }
+
+    c.re.render(c.sc, c.ca);
+}
+
+animateCoin();
+
 
             // Dice Engine Initialization
 const d = createScene('diceCanvas');
