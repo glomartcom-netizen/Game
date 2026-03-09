@@ -253,56 +253,120 @@ const sounds = {
     ambience: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-casino-slot-machine-room-ambience-1982.mp3'], loop:true, volume:0.1})
 };
 
-// --- 2. WALLET MODULE (AppKit) ---
+// --- 2. WALLET SETUP ---
 const projectId = '059cc242b0cc96ac9665c598b76ddc7b';
-
 const modal = createAppKit({
   adapters: [new Ethers5Adapter()],
   networks: [bsc],
-  metadata: { 
-    name: 'DimeX Pro', 
-    url: window.location.origin, 
-    icons: ['https://i.ibb.co/HpqwGFqt/logo.png'] 
-  },
-  projectId,
-  features: { analytics: true }
+  metadata: { name: 'DimeX Pro', url: window.location.origin },
+  projectId
 });
 
-// GLOBAL MAP FOR BUTTONS
+// குளோபல் கனெக்ட் பங்க்ஷன்
 window.connectWallet = () => modal.open();
 
 window.syncWallet = async () => {
-    try {
-        const isConnected = modal.getIsConnected();
+    const isConnected = modal.getIsConnected();
+    const connectBtn = document.getElementById('connectBtn');
+    const refLinkEl = document.getElementById('refLink');
+    
+    if (isConnected) {
         const provider = modal.getWalletProvider();
-        const refLinkEl = document.getElementById('refLink');
-        const connectBtn = document.getElementById('connectBtn');
+        const ethersProvider = new ethers.providers.Web3Provider(provider);
+        const signer = ethersProvider.getSigner();
+        const address = await signer.getAddress();
         
-        if (isConnected && provider) {
-            const ethersProvider = new ethers.providers.Web3Provider(provider);
-            const signer = ethersProvider.getSigner();
-            const address = await signer.getAddress();
-            
-            window.isWalletConnected = true;
-            window.userAddress = address;
-            
-            if (refLinkEl) {
-                const referralUrl = `${window.location.origin}/ref?id=${address}`;
-                refLinkEl.innerText = referralUrl;
-                refLinkEl.classList.add('text-green-400', 'font-bold');
-            }
-            if (connectBtn) {
-                connectBtn.innerText = address.substring(0, 6) + "..." + address.substring(address.length - 4);
-            }
-            if(dmxBalance === 0) dmxBalance = 1000.00; 
-            updateUI();
-        } else {
-            window.isWalletConnected = false;
-            if (refLinkEl) refLinkEl.innerText = "Connect wallet to activate link";
-            if (connectBtn) connectBtn.innerText = "Connect Wallet";
+        // --- REAL MODE ON ---
+        window.isWalletConnected = true;
+        
+        // 1. வாலட் அட்ரஸ் மற்றும் கலர் மாற்றம்
+        connectBtn.innerText = address.substring(0, 6) + "..." + address.substring(38);
+        connectBtn.style.background = "linear-gradient(135deg, #10b981, #059669)"; // பச்சை நிறம்
+        
+        // 2. ரெபரல் லிங்க் அப்டேட்
+        if (refLinkEl) {
+            const refUrl = window.location.origin + "/ref?id=" + address;
+            refLinkEl.innerHTML = `<span>${refUrl}</span> <span class="text-xs opacity-50">📋</span>`;
+            refLinkEl.classList.remove('text-indigo-300');
+            refLinkEl.classList.add('text-green-400', 'border-green-500/50', 'bg-slate-900');
         }
-    } catch (error) { console.error("Sync Error:", error); }
+
+        console.log("Wallet Verified: " + address);
+    } else {
+        // --- DUMMY MODE ---
+        window.isWalletConnected = false;
+        connectBtn.innerText = "Connect Wallet";
+        connectBtn.style.background = "linear-gradient(135deg, #6366f1, #a855f7)";
+        if (refLinkEl) refLinkEl.innerText = "Connect wallet to activate link";
+    }
+    window.updateUI();
 };
+
+modal.subscribeState(window.syncWallet);
+
+// --- 3. CORE FUNCTIONS ---
+window.updateUI = () => {
+    const bal = window.isWalletConnected ? window.realBalance : window.dummyBalance;
+    document.getElementById('dmxGame').innerText = bal.toFixed(2) + " DMX";
+    
+    const statusLabel = document.querySelector('.text-[8px].text-slate-500 span');
+    if(statusLabel) {
+        statusLabel.innerText = window.isWalletConnected ? "Verified" : "Optimal (Demo)";
+        statusLabel.className = window.isWalletConnected ? "text-green-400" : "text-yellow-400";
+    }
+};
+
+window.playGame = (type) => {
+    // வாலட் கனெக்ட் ஆகியிருந்தால் ரியல் கேம், இல்லையென்றால் டம்மி கேம்
+    const bet = parseInt(document.getElementById('betAmount').value);
+    let currentBal = window.isWalletConnected ? window.realBalance : window.dummyBalance;
+
+    if (currentBal < bet || window.isPlaying) {
+        alert("Low Balance! Please add DMX.");
+        return;
+    }
+
+    window.isPlaying = true;
+    if(window.isWalletConnected) window.realBalance -= bet;
+    else window.dummyBalance -= bet;
+    
+    window.updateUI();
+
+    // சிமுலேஷன் (1.5 நொடியில் முடிவு வரும்)
+    setTimeout(() => {
+        const win = Math.random() > 0.5;
+        if(win) {
+            if(window.isWalletConnected) window.realBalance += (bet * 2);
+            else window.dummyBalance += (bet * 2);
+            alert(window.isWalletConnected ? "REAL WINNER! 💰" : "DEMO WIN! ✨");
+        }
+        window.isPlaying = false;
+        window.updateUI();
+    }, 1500);
+};
+
+// பட்டன்கள் மற்றும் நேவிகேஷன்
+window.openGame = (id) => {
+    document.getElementById('lobbyScreen').classList.add('hidden');
+    document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none');
+    const gameEl = document.getElementById(id + 'Game');
+    if(gameEl) gameEl.style.display = 'flex';
+};
+
+window.backToLobby = () => {
+    document.getElementById('lobbyScreen').classList.remove('hidden');
+    document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none');
+};
+
+window.copyRefLink = () => {
+    if(!window.isWalletConnected) return;
+    const text = document.getElementById('refLink').innerText.split(' ')[0];
+    navigator.clipboard.writeText(text);
+    alert("Referral Link Copied!");
+};
+
+// INITIAL LOAD
+window.onload = () => window.updateUI();
 
 modal.subscribeState(() => window.syncWallet());
 
