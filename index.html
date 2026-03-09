@@ -163,9 +163,14 @@ body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; 
 
 <script>
         // ------------------ GLOBAL VARIABLES ------------------
-let dmxBalance = 500, isPlaying = false, currentCrash = 1, currentBet = 0;
-let selectedSides = { coin:'Heads', dice:1, battle:'P1' };
-let coinMesh, diceMesh, crashInterval, isWalletConnected = false;
+let dmxBalance = 500.00;
+let isPlaying = false;
+let currentCrash = 1.0;
+let currentBet = 0;
+let selectedSides = { coin: 'Heads', dice: 1, battle: 'P1' };
+let coinMesh, diceMesh, crashInterval;
+let isWalletConnected = false;
+let userAddress = "";
 
 const sounds = {
     win: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-casino-bling-notification-229.mp3']}),
@@ -173,26 +178,29 @@ const sounds = {
     explosion: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-explosive-impact-boom-2580.mp3']}),
     ambience: new Howl({src:['https://assets.mixkit.co/sfx/preview/mixkit-casino-slot-machine-room-ambience-1982.mp3'], loop:true, volume:0.1})
 };
-        // Mobile Sound Unlock Fix - Important for Tablet
-        const unlockAudio = () => {
-            if(!sounds.ambience.playing()) {
-                sounds.ambience.play();
-                sounds.win.play(); sounds.win.stop(); // Pre-load
-            }
-            document.removeEventListener('click', unlockAudio);
-            document.removeEventListener('touchstart', unlockAudio);
-        };
-        document.addEventListener('click', unlockAudio);
-        document.addEventListener('touchstart', unlockAudio);
 
-        // ------------------ INIT ------------------
+// ------------------ UI & SOUND HELPERS ------------------
 function updateUI() {
-    document.getElementById('dmxGame').innerText = dmxBalance.toFixed(2) + " DMX";
-    document.getElementById('betValue').innerText = document.getElementById('betAmount').value + " DMX";
+    const balanceEl = document.getElementById('dmxGame');
+    const betValEl = document.getElementById('betValue');
+    const betInput = document.getElementById('betAmount');
+    
+    if (balanceEl) balanceEl.innerText = dmxBalance.toFixed(2) + " DMX";
+    if (betValEl && betInput) betValEl.innerText = betInput.value + " DMX";
 }
 
-// ------------------ WALLET ------------------
-<script type="module">
+const unlockAudio = () => {
+    if(!sounds.ambience.playing()) {
+        sounds.ambience.play();
+    }
+    document.removeEventListener('click', unlockAudio);
+    document.removeEventListener('touchstart', unlockAudio);
+};
+document.addEventListener('click', unlockAudio);
+document.addEventListener('touchstart', unlockAudio);
+
+// ------------------ WALLET MODULE (AppKit) ------------------
+</script> <script type="module">
 import { createAppKit } from 'https://esm.sh/@reown/appkit?bundle'
 import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'
 import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'
@@ -211,7 +219,7 @@ const modal = createAppKit({
   features: { analytics: true }
 });
 
-// கேம் என்ஜினுடன் வாலட்டை இணைக்கும் முக்கிய ஃபங்க்ஷன்
+// Sync Wallet Data with Game UI
 window.syncWallet = async () => {
     try {
         const isConnected = modal.getIsConnected();
@@ -222,53 +230,63 @@ window.syncWallet = async () => {
             const signer = ethersProvider.getSigner();
             const address = await signer.getAddress();
             
-            // UI அப்டேட்
-            const shortAddr = address.substring(0, 6) + "..." + address.substring(38);
-            document.getElementById('connectBtn').innerText = shortAddr;
-            document.getElementById('refLink').innerText = `https://dmxelite.pro/ref?id=${address.substring(2, 10)}`;
-            
-            // குளோபல் ஸ்டேட் மாற்றம்
+            // Update Global State
             window.isWalletConnected = true;
+            window.userAddress = address;
             
-            // கன்சோலில் உறுதி செய்தல்
-            console.log("DMX Wallet Synced:", address);
-            if(window.addLog) window.addLog("Wallet Connected: " + shortAddr, "text-indigo-400");
+            // Update UI Elements
+            const shortAddr = address.substring(0, 6) + "..." + address.substring(address.length - 4);
+            const connectBtn = document.getElementById('connectBtn');
+            const refLink = document.getElementById('refLink');
+            
+            if (connectBtn) connectBtn.innerText = shortAddr;
+            if (refLink) refLink.innerText = `${window.location.origin}/ref?id=${address.substring(2, 10)}`;
+            
+            if (window.addLog) window.addLog("System: Wallet Synced (" + shortAddr + ")", "text-indigo-400");
+        } else {
+            window.isWalletConnected = false;
+            const connectBtn = document.getElementById('connectBtn');
+            if (connectBtn) connectBtn.innerText = "CONNECT WALLET";
         }
     } catch (error) {
-        console.error("Sync Error:", error);
+        console.error("Wallet Sync Error:", error);
     }
 };
 
-// பட்டன் கிளிக் செய்யும்போது மோடல் திறக்க
-window.connectWallet = () => {
-    modal.open();
-};
+// Global function to trigger modal
+window.connectWallet = () => modal.open();
 
-// வாலட் ஸ்டேட் மாறும்போது ஆட்டோமேட்டிக் சிங்க்
-modal.subscribeState(state => {
-    if(state.selectedNetworkId !== '56') {
-        // தவறான நெட்வொர்க் என்றால் எச்சரிக்கை (விரும்பினால்)
-        console.warn("Please switch to BSC Network");
-    }
-    window.syncWallet();
-});
+// Event listeners for state changes
+modal.subscribeState(() => window.syncWallet());
+window.addEventListener("load", () => setTimeout(window.syncWallet, 1500));
+</script>
 
-// பேஜ் லோட் ஆனதும் கனெக்ஷன் செக்
-window.addEventListener("load", () => {
-    setTimeout(window.syncWallet, 2000); 
-});
-
-// ------------------ 3D INIT ------------------
-function init3D(){
+<script>
+// ------------------ 3D ENGINE INIT ------------------
+function init3D() {
     const loader = new THREE.TextureLoader();
-    const createScene = id=>{
+    
+    const createScene = (id) => {
+        const container = document.getElementById(id);
+        if (!container) return null;
+        
         const sc = new THREE.Scene();
-        const re = new THREE.WebGLRenderer({alpha:true,antialias:true});
-        re.setSize(300,150); document.getElementById(id).appendChild(re.domElement);
-        const ca = new THREE.PerspectiveCamera(45,2/1,0.1,100); ca.position.z=5;
-        sc.add(new THREE.AmbientLight(0xffffff,2.5));
-        return {sc,re,ca};
+        const re = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        re.setSize(300, 150); 
+        container.appendChild(re.domElement);
+        
+        const ca = new THREE.PerspectiveCamera(45, 2/1, 0.1, 100);
+        ca.position.z = 5;
+        
+        sc.add(new THREE.AmbientLight(0xffffff, 2.5));
+        return { sc, re, ca };
     };
+
+    // Initialize specific game scenes (Coin/Dice)
+    // window.coinScene = createScene('coinCanvas');
+    // ... rest of 3D geometry logic ...
+}
+
 
 // REAL DMX COIN ENGINE
 // ============================
@@ -710,6 +728,3 @@ animateDice();
     </script>
 </body>
 </html>
-
-
-Game  not working any function and buttons
