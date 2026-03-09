@@ -669,158 +669,284 @@ animateDice();
 
         }
 
-        function startBattle(bet){
+        /**
+ * Starts the battle simulation with betting logic
+ * @param {number} bet - The current bet amount
+ */
+function startBattle(bet) {
+    const statusEl = document.getElementById("battleStatus");
+    if (!statusEl) return;
 
-    document.getElementById("battleStatus").innerText =
-    "⚔️ Fighting...";
+    // 1. Set playing state to prevent multiple clicks
+    isPlaying = true;
+    statusEl.innerText = "⚔️ BATTLE IN PROGRESS...";
+    statusEl.classList.add('animate-pulse', 'text-indigo-400');
 
-    setTimeout(()=>{
+    // 2. Add log entry
+    addLog(`Battle started with ${bet} DMX`, "text-slate-400");
 
+    // 3. Simulate battle delay
+    setTimeout(() => {
+        // Random outcome logic (50/50 chance)
         const win = Math.random() > 0.5;
 
-        if(win){
-
-            document.getElementById("battleStatus").innerText =
-            "🏆 You Win!";
-
+        statusEl.classList.remove('animate-pulse');
+        
+        if (win) {
+            statusEl.innerText = "🏆 GLORY! YOU WIN!";
+            statusEl.classList.replace('text-indigo-400', 'text-yellow-400');
             finalize(true, bet, 1.8);
-
-        }else{
-
-            document.getElementById("battleStatus").innerText =
-            "💀 You Lost!";
-
+        } else {
+            statusEl.innerText = "💀 DEFEAT! YOU LOST!";
+            statusEl.classList.replace('text-indigo-400', 'text-red-500');
             finalize(false, bet, 0);
-
         }
+    }, 2000); // 2 seconds delay for suspense
+}
 
-    },1500);
-
-        }
-
-        function finalize(won, bet, mult) {
-
+/**
+ * Finalizes the game result and updates balances
+ * @param {boolean} won - Whether the user won
+ * @param {number} bet - The initial bet amount
+ * @param {number} mult - The winning multiplier (e.g., 1.8x)
+ */
+function finalize(won, bet, mult) {
+    // Reset global playing state
     isPlaying = false;
 
-    if(won){
-
+    if (won) {
         const winAmt = bet * mult;
-
         dmxBalance += winAmt;
 
-        // sound
-        if(sounds.win) sounds.win.play();
+        // Play Win Sound
+        if (sounds.win) sounds.win.play();
 
-        // popup
+        // Show Visual Effects
         showWinPopup(winAmt);
 
-        // confetti
-        if(typeof confetti !== "undefined"){
-            confetti({
-                particleCount: 200,
-                spread: 80,
-                origin: { y: 0.6 }
-            });
+        // Professional Confetti Burst
+        if (typeof confetti !== "undefined") {
+            const end = Date.now() + (2 * 1000);
+            const colors = ['#6366f1', '#fbbf24', '#ffffff'];
+
+            (function frame() {
+                confetti({
+                    particleCount: 3,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: colors
+                });
+                confetti({
+                    particleCount: 3,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: colors
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
         }
 
-        addLog(`Won: +${winAmt.toFixed(2)} DMX`, "text-green-400");
-
+        addLog(`System: Payout +${winAmt.toFixed(2)} DMX`, "text-green-400 font-bold");
     } 
-    else{
+    else {
+        // Play Loss Sound
+        if (sounds.lose) sounds.lose.play();
 
-        if(sounds.lose) sounds.lose.play();
-
-        addLog(`Lost: -${bet} DMX`, "text-red-500");
+        addLog(`System: Loss -${bet.toFixed(2)} DMX`, "text-red-500");
     }
 
+    // Refresh all UI elements
     updateUI();
 }
 
-        function showWinPopup(amt){
-
+        /**
+ * Displays the premium winner popup with an animation
+ * @param {number} amount - The winning amount in DMX
+ */
+function showWinPopup(amount) {
     const popup = document.getElementById('winPopup');
+    const msg = document.getElementById('winAmountMsg');
 
-    document.getElementById('winAmountMsg').innerText =
-    `You Won ${amt.toFixed(2)} DMX`;
+    if (popup && msg) {
+        // Set the winning text
+        msg.innerText = `${amount.toFixed(2)} DMX`;
 
-    popup.style.transform = "translate(-50%, -50%) scale(1)";
-
-    setTimeout(()=>{
-        popup.style.transform = "translate(-50%, -50%) scale(0)";
-    },2500);
-
-}
-        function addLog(m, c) {
-            const f = document.getElementById('liveFeed');
-            const d = document.createElement('div');
-            d.className = c; d.innerText = `[${new Date().toLocaleTimeString()}] ${m}`;
-            f.prepend(d);
-        }
-    
-        function openGame(g) { 
-    document.getElementById('lobbyScreen').style.display = 'none';
-    // Hide all other game screens
-    document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none');
-    // Show selected game
-    document.getElementById(g + 'Game').style.display = 'flex';
-}
+        // Show the popup (removing 'hidden' class from our new design)
+        popup.classList.remove('hidden');
         
-        function backToLobby() { 
-    document.getElementById('lobbyScreen').style.display = 'grid';
-    document.querySelectorAll('.game-screen').forEach(s => s.style.display = 'none');
+        // Play Win Sound
+        if (sounds.win) sounds.win.play();
+
+        // Log to terminal
+        addLog(`BIG WIN: +${amount.toFixed(2)} DMX`, "text-yellow-400 font-bold");
+
+        // Hide the popup after 3 seconds
+        setTimeout(() => {
+            popup.classList.add('hidden');
+        }, 3000);
+    }
 }
 
-        function setSide(g, v) { 
-            selectedSides[g] = v; 
-            document.querySelectorAll(`[id^="${g}"]`).forEach(b => b.classList.remove('active-selection')); 
-            document.getElementById(g + v).classList.add('active-selection'); 
-        }
+/**
+ * Adds a new entry to the Live Terminal/Activity feed
+ * @param {string} message - The text to display
+ * @param {string} colorClass - Tailwind color class (e.g., 'text-green-400')
+ */
+function addLog(message, colorClass) {
+    const feed = document.getElementById('liveFeed');
+    if (!feed) return;
 
-        function toggleAmbience() {
-            if(sounds.ambience.playing()) {
-                sounds.ambience.stop();
-                document.getElementById('muteBtn').innerText = "🔈 SOUND: OFF";
-            } else {
-                sounds.ambience.play();
-                document.getElementById('muteBtn').innerText = "🔊 SOUND: ON";
-            }
-        }
+    const entry = document.createElement('div');
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    
+    // Modern terminal styling
+    entry.className = `${colorClass} border-l-2 border-current pl-2 py-0.5 animate-pulse-once`;
+    entry.innerHTML = `<span class="opacity-40 text-[7px] mr-2">${time}</span> ${message}`;
+    
+    // Add to the top of the feed
+    feed.prepend(entry);
 
-        // --- ADD THIS NEW FUNCTION HERE ---
+    // Keep only the last 50 logs to prevent lag
+    if (feed.children.length > 50) {
+        feed.removeChild(feed.lastChild);
+    }
+}
+
+    
+        /**
+ * Opens a specific game and hides the lobby
+ * @param {string} gameId - The prefix of the game to open (e.g., 'coin', 'dice')
+ */
+function openGame(gameId) {
+    const lobby = document.getElementById('lobbyScreen');
+    const targetGame = document.getElementById(gameId + 'Game');
+
+    // Hide Lobby with a quick fade (if CSS transition exists)
+    if (lobby) lobby.style.display = 'none';
+
+    // Hide all other game screens and remove active states
+    document.querySelectorAll('.game-screen').forEach(screen => {
+        screen.style.display = 'none';
+    });
+
+    // Show the selected game
+    if (targetGame) {
+        targetGame.style.display = 'flex';
+        // Log activity
+        if (window.addLog) window.addLog(`System: Entering ${gameId.toUpperCase()} room`, "text-indigo-400");
+    }
+}
+
+/**
+ * Returns the user to the main lobby screen
+ */
+function backToLobby() {
+    const lobby = document.getElementById('lobbyScreen');
+    
+    // Show Lobby
+    if (lobby) lobby.style.display = 'grid';
+
+    // Hide all game-specific screens
+    document.querySelectorAll('.game-screen').forEach(screen => {
+        screen.style.display = 'none';
+    });
+}
+
+/**
+ * Updates the user's selection (Heads/Tails, Dice numbers, etc.)
+ * @param {string} game - The game category
+ * @param {string|number} value - The selected value
+ */
+function setSide(game, value) {
+    selectedSides[game] = value;
+    
+    // Select all buttons related to this specific game selection
+    const buttons = document.querySelectorAll(`[id^="${game}"]`);
+    buttons.forEach(btn => btn.classList.remove('active-selection', 'border-indigo-500', 'bg-indigo-500/20'));
+
+    // Highlight the selected button
+    const selectedBtn = document.getElementById(game + value);
+    if (selectedBtn) {
+        selectedBtn.classList.add('active-selection', 'border-indigo-500', 'bg-indigo-500/20');
+    }
+}
+
+/**
+ * Toggles ambient background music and updates UI icon
+ */
+function toggleAmbience() {
+    const muteBtn = document.getElementById('muteBtn');
+    
+    if (sounds.ambience.playing()) {
+        sounds.ambience.pause(); // Pause instead of stop to resume later
+        if (muteBtn) muteBtn.innerHTML = "🔈 SOUND: OFF";
+    } else {
+        sounds.ambience.play();
+        if (muteBtn) muteBtn.innerHTML = "🔊 SOUND: ON";
+    }
+}
+
+
+        // --- UPDATED INITIALIZATION LOGIC ---
+
+/**
+ * Copies the referral link text to the clipboard
+ */
 function copyRefLink() {
     const linkElement = document.getElementById('refLink');
     const linkText = linkElement ? linkElement.innerText : "";
 
-    // Check if the link is generated (contains http)
     if (linkText.includes('http')) {
         navigator.clipboard.writeText(linkText).then(() => {
-            // Update the live activity log in the sidebar
-            if (window.addLog) {
-                window.addLog("System: Referral link copied successfully", "text-green-400");
-            }
+            if (window.addLog) window.addLog("System: Referral link copied", "text-green-400");
             alert("Copied to clipboard!");
-        }).catch(err => {
-            console.error('Action failed: ', err);
-        });
+        }).catch(err => console.error('Copy failed:', err));
     } else {
         alert("Please connect your wallet first!");
     }
-            }
+}
 
-        window.onload = () => {
-            init3D();
-            updateUI();
-            // Setup Reels
-            [1,2,3].forEach(id => {
-                const r = document.getElementById(`reel${id}`);
-                for(let i=0; i<60; i++) {
-                    const d = document.createElement('div');
-                    d.className = 'h-[80px] flex items-center justify-center text-3xl';
-                    d.innerText = ['💎','💰','7️⃣','🔔','👑','⚡'][i%6];
-                    r.appendChild(d);
-                }
-            });
-        };
-    </script>
+/**
+ * Initializes all game systems when the window loads
+ */
+window.addEventListener('load', () => {
+    // 1. Initialize 3D Graphics
+    if (typeof init3D === 'function') init3D();
+    
+    // 2. Initialize UI & Balances
+    if (typeof updateUI === 'function') updateUI();
+    
+    // 3. Setup Slot Reels (Optimized)
+    const reelIcons = ['💎', '💰', '7️⃣', '🔔', '👑', '⚡'];
+    [1, 2, 3].forEach(id => {
+        const reel = document.getElementById(`reel${id}`);
+        if (!reel) return;
+
+        const fragment = document.createDocumentFragment();
+        // Create 60 items for a smooth scrolling effect
+        for (let i = 0; i < 60; i++) {
+            const div = document.createElement('div');
+            div.className = 'h-[80px] flex items-center justify-center text-3xl select-none';
+            div.innerText = reelIcons[i % reelIcons.length];
+            fragment.appendChild(div);
+        }
+        reel.innerHTML = ''; // Clear existing
+        reel.appendChild(fragment);
+    });
+
+    // 4. Auto-sync Wallet (if already connected)
+    setTimeout(() => {
+        if (window.syncWallet) window.syncWallet();
+    }, 1500);
+
+    console.log("DMX Engine: Systems Operational");
+});
+
+</script>
 </body>
 </html>
