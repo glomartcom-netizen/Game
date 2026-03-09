@@ -13,17 +13,59 @@
     import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'  
     import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'  
 
-    const projectId = '059cc242b0cc96ac9665c598b76ddc7b';  
-    const modal = createAppKit({  
-      adapters: [new Ethers5Adapter()],  
-      networks: [bsc],  
-      metadata: { name: 'DimeX Pro', url: window.location.origin, icons: ['https://i.ibb.co/HpqwGFqt/logo.png'] },  
-      projectId,  
-      features: { analytics: true }  
-    });  
-    window.appKitModal = modal;  
-    modal.subscribeState((state) => { if(state?.isConnected && window.syncWallet) window.syncWallet(); });  
-</script>  
+    <script type="module">    
+        import { createAppKit } from 'https://esm.sh/@reown/appkit?bundle'    
+        import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'    
+        import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'    
+            
+        const projectId = '059cc242b0cc96ac9665c598b76ddc7b';    
+            
+        const modal = createAppKit({    
+          adapters: [new Ethers5Adapter()],    
+          networks: [bsc],    
+          metadata: {     
+            name: 'DimeX Pro',     
+            url: window.location.origin,     
+            icons: ['https://i.ibb.co/HpqwGFqt/logo.png']     
+          },    
+          projectId,    
+          features: { analytics: true }    
+        });    
+            
+        window.appKitModal = modal;    
+            
+        const syncWallet = async () => {  
+            const provider = modal.getWalletProvider();  
+            if (provider) {  
+                const accounts = await provider.request({ method: 'eth_accounts' });  
+                if (accounts.length > 0) {  
+                    const addr = accounts[0];  
+                    document.getElementById('connectBtn').innerText = addr.slice(0, 6) + "..." + addr.slice(-4);  
+                    // Demo balance boost for connected users  
+                    window.balance = 5000.00;  
+                    window.updateUI();  
+                }  
+            }  
+        };  
+  
+        window.syncWallet = syncWallet;  
+  
+        modal.subscribeState((state) => {    
+          if(state?.isConnected) syncWallet();    
+        });    
+            
+        window.addEventListener("load", () => {      
+            let retry = 0;      
+            const reconnect = setInterval(() => {      
+                if(modal.getWalletProvider()){      
+                    syncWallet();      
+                    clearInterval(reconnect);      
+                }      
+                if(++retry >= 10) clearInterval(reconnect);      
+            }, 1000);      
+        });      
+  
+        window.connectWallet = () => modal.open();  
 
 <style>  
     :root { --primary: #6366f1; --dark: #020617; }  
