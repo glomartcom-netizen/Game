@@ -154,24 +154,24 @@ body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; 
     <!-- Lobby Games -->
     <div class="lg:col-span-9">
         <div id="lobbyScreen" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div onclick="openGame('coin')" class="lobby-card">🪙<p class="text-[10px] font-bold mt-2">COIN FLIP</p></div>
-            <div onclick="openGame('slot')" class="lobby-card">🎰<p class="text-[10px] font-bold mt-2">SLOTS</p></div>
-            <div onclick="openGame('crash')" class="lobby-card">🚀<p class="text-[10px] font-bold mt-2">CRASH</p></div>
-            <div onclick="openGame('dice')" class="lobby-card">🎲<p class="text-[10px] font-bold mt-2">DICE</p></div>
-            <div onclick="openGame('battle')" class="lobby-card">⚔️<p class="text-[10px] font-bold mt-2">BATTLE</p></div>
-        </div>
+    <div onclick="openGame('coin')" class="lobby-card">🪙<p class="text-[10px] font-bold mt-2">COIN FLIP</p></div>
+    <div onclick="openGame('slot')" class="lobby-card">🎰<p class="text-[10px] font-bold mt-2">SLOTS</p></div>
+    <div onclick="openGame('crash')" class="lobby-card">🚀<p class="text-[10px] font-bold mt-2">CRASH</p></div>
+    <div onclick="openGame('dice')" class="lobby-card">🎲<p class="text-[10px] font-bold mt-2">DICE</p></div>
+    <div onclick="openGame('battle')" class="lobby-card">⚔️<p class="text-[10px] font-bold mt-2">BATTLE</p></div>
 
-                <div class="lobby-card opacity-30">📉<p class="text-[9px] mt-2">HI-LO</p></div>
-                <div class="lobby-card opacity-30">⚪<p class="text-[9px] mt-2">PLINKO</p></div>
-                <div class="lobby-card opacity-30">🎡<p class="text-[9px] mt-2">WHEEL</p></div>
-                <div class="lobby-card opacity-30">🔴<p class="text-[9px] mt-2">ROULETTE</p></div>
-                <div class="lobby-card opacity-30">♠️<p class="text-[9px] mt-2">BLACKJACK</p></div>
-                <div class="lobby-card opacity-30">🎴<p class="text-[9px] mt-2">TEEN PATTI</p></div>
-                <div class="lobby-card opacity-30">🔄<p class="text-[9px] mt-2">ANDAR BAHAR</p></div>
-                <div class="lobby-card opacity-30">🔢<p class="text-[9px] mt-2">KENO</p></div>
-                <div class="lobby-card opacity-30">🍀<p class="text-[9px] mt-2">LUCKY 7</p></div>
-                <div class="lobby-card opacity-30">🎨<p class="text-[9px] mt-2">COLOR BET</p></div>
-            </div>
+    <!-- unavailable games -->
+    <div class="lobby-card opacity-30">📉<p class="text-[9px] mt-2">HI-LO</p></div>
+    <div class="lobby-card opacity-30">⚪<p class="text-[9px] mt-2">PLINKO</p></div>
+    <div class="lobby-card opacity-30">🎡<p class="text-[9px] mt-2">WHEEL</p></div>
+    <div class="lobby-card opacity-30">🔴<p class="text-[9px] mt-2">ROULETTE</p></div>
+    <div class="lobby-card opacity-30">♠️<p class="text-[9px] mt-2">BLACKJACK</p></div>
+    <div class="lobby-card opacity-30">🎴<p class="text-[9px] mt-2">TEEN PATTI</p></div>
+    <div class="lobby-card opacity-30">🔄<p class="text-[9px] mt-2">ANDAR BAHAR</p></div>
+    <div class="lobby-card opacity-30">🔢<p class="text-[9px] mt-2">KENO</p></div>
+    <div class="lobby-card opacity-30">🍀<p class="text-[9px] mt-2">LUCKY 7</p></div>
+    <div class="lobby-card opacity-30">🎨<p class="text-[9px] mt-2">COLOR BET</p></div>
+</div> <!-- single closing div for lobbyScreen -->
 
              <!-- Game Screens -->
         <div id="coinGame" class="game-screen">
@@ -337,176 +337,102 @@ window.addEventListener("load", () => setTimeout(window.syncWallet, 1500));
 </script>
 
 <script>
-// ------------------ 3D ENGINE INIT ------------------
-function init3D() {
-    const loader = new THREE.TextureLoader();
-    
-    const createScene = (id) => {
-        const container = document.getElementById(id);
-        if (!container) return null;
-        
-        const sc = new THREE.Scene();
-        const re = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        re.setSize(300, 150); 
-        container.appendChild(re.domElement);
-        
-        const ca = new THREE.PerspectiveCamera(45, 2/1, 0.1, 100);
-        ca.position.z = 5;
-        
-        sc.add(new THREE.AmbientLight(0xffffff, 2.5));
-        return { sc, re, ca };
-    };
+// ---------- 3D SCENE CREATION ----------
+function createScene(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return null;
 
-    // Initialize specific game scenes (Coin/Dice)
-    // window.coinScene = createScene('coinCanvas');
-    // ... rest of 3D geometry logic ...
+    const scene = new THREE.Scene();
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.z = 5;
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambient);
+
+    const spot = new THREE.SpotLight(0xffffff, 2.5);
+    spot.position.set(2,5,5);
+    scene.add(spot);
+
+    const rim = new THREE.PointLight(0xffffff, 1);
+    rim.position.set(-5,-2,-5);
+    scene.add(rim);
+
+    return { sc: scene, re: renderer, ca: camera };
 }
 
-
-// REAL DMX COIN ENGINE (Enhanced)
-// ============================
-
+// ---------- COIN SCENE ----------
 const c = createScene('coinCanvas');
-const loader = new THREE.TextureLoader();
 
-// Load DMX textures
 const headTexture = loader.load('assets/coin_heads.png');
 const tailTexture = loader.load('assets/coin_tails.png');
 
-// Professional metallic settings for that real gold look
 const goldMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffd700, // Brighter gold
-    metalness: 1.0,
-    roughness: 0.15, // Smoother for better shine
-    emissive: 0x443300, // Deep gold glow
-    emissiveIntensity: 0.1
+    color: 0xffd700, metalness: 1, roughness: 0.15, emissive: 0x443300, emissiveIntensity: 0.1
 });
 
-const headMaterial = new THREE.MeshStandardMaterial({
-    map: headTexture,
-    metalness: 1.0,
-    roughness: 0.2,
-    bumpScale: 0.05 // Adds depth to the logo
-});
+const headMaterial = new THREE.MeshStandardMaterial({ map: headTexture, metalness: 1, roughness: 0.2, bumpScale: 0.05 });
+const tailMaterial = new THREE.MeshStandardMaterial({ map: tailTexture, metalness: 1, roughness: 0.2 });
 
-const tailMaterial = new THREE.MeshStandardMaterial({
-    map: tailTexture,
-    metalness: 1.0,
-    roughness: 0.2
-});
-
-// Materials: 0=side, 1=top(heads), 2=bottom(tails)
-// CylinderGeometry faces: [side, top, bottom]
-const coinMaterials = [
-    goldMaterial, // 0: Side edge
-    headMaterial, // 1: Top face (Heads)
-    tailMaterial  // 2: Bottom face (Tails)
-];
-
-// Coin geometry (Radius, Radius, Height, Segments)
-const coinGeometry = new THREE.CylinderGeometry(2, 2, 0.25, 64);
-
-// Create coin
+const coinMaterials = [ goldMaterial, headMaterial, tailMaterial ];
+const coinGeometry = new THREE.CylinderGeometry(2,2,0.25,64);
 coinMesh = new THREE.Mesh(coinGeometry, coinMaterials);
-
-// Initial Rotation to show the face
-coinMesh.rotation.x = Math.PI / 2;
+coinMesh.rotation.x = Math.PI/2;
 c.sc.add(coinMesh);
 
-// ADVANCED LIGHTING
-// Main Spotlight for highlights
-const spotLight = new THREE.SpotLight(0xffffff, 2.5);
-spotLight.position.set(2, 5, 5);
-spotLight.angle = 0.5;
-spotLight.penumbra = 1;
-c.sc.add(spotLight);
-
-// Rim Light to outline the gold edge
-const rimLight = new THREE.PointLight(0xffffff, 1);
-rimLight.position.set(-5, -2, -5);
-c.sc.add(rimLight);
-
-const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-c.sc.add(ambient);
-
-/**
- * Idle animation for the DMX coin
- */
 function animateCoin() {
     requestAnimationFrame(animateCoin);
-
     if (!isPlaying) {
-        // Slow cinematic rotation
-        coinMesh.rotation.z += 0.01; 
-        
-        // Gentle tilting to catch the light
-        coinMesh.rotation.y = Math.sin(Date.now() * 0.001) * 0.2;
+        coinMesh.rotation.z += 0.01;
+        coinMesh.rotation.y = Math.sin(Date.now()*0.001)*0.2;
     }
-
     c.re.render(c.sc, c.ca);
 }
-
 animateCoin();
 
-
-            // Dice Engine Initialization
+// ---------- DICE SCENE ----------
 const d = createScene('diceCanvas');
-const loader = new THREE.TextureLoader();
 
-// Dice Materials with high-quality settings
 const diceMaterials = [
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice1.png'), roughness: 0.2, metalness: 0.1 }), // Front
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice2.png'), roughness: 0.2, metalness: 0.1 }), // Back
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice3.png'), roughness: 0.2, metalness: 0.1 }), // Top
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice4.png'), roughness: 0.2, metalness: 0.1 }), // Bottom
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice5.png'), roughness: 0.2, metalness: 0.1 }), // Left
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice6.png'), roughness: 0.2, metalness: 0.1 })  // Right
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice1.png'), roughness:0.2, metalness:0.1 }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice2.png'), roughness:0.2, metalness:0.1 }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice3.png'), roughness:0.2, metalness:0.1 }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice4.png'), roughness:0.2, metalness:0.1 }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice5.png'), roughness:0.2, metalness:0.1 }),
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice6.png'), roughness:0.2, metalness:0.1 }),
 ];
 
-// Dice Mesh - Using BoxGeometry with more segments for smoother appearance
-diceMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(2.2, 2.2, 2.2, 4, 4, 4),
-    diceMaterials
-);
-
-// Position & Shadow
-diceMesh.position.set(0, 0, 0);
-diceMesh.castShadow = true;
+diceMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2,2.2,2.2,4,4,4), diceMaterials);
 d.sc.add(diceMesh);
 
-// Enhanced Lighting for 3D depth
-const pointLight = new THREE.PointLight(0xffffff, 2);
-pointLight.position.set(5, 5, 5);
-d.sc.add(pointLight);
+const diceLight = new THREE.PointLight(0xffffff, 2);
+diceLight.position.set(5,5,5);
+d.sc.add(diceLight);
 
-const rimLight = new THREE.PointLight(0x6366f1, 1); // Subtle indigo glow from back
-rimLight.position.set(-5, -5, -5);
-d.sc.add(rimLight);
+const diceRim = new THREE.PointLight(0x6366f1,1);
+diceRim.position.set(-5,-5,-5);
+d.sc.add(diceRim);
 
-const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-d.sc.add(ambient);
+const diceAmbient = new THREE.AmbientLight(0xffffff,0.8);
+d.sc.add(diceAmbient);
 
-/**
- * Animation loop for the Dice
- */
 function animateDice() {
     requestAnimationFrame(animateDice);
-
-    if (!isPlaying) {
-        // Smooth idle rotation
+    if(!isPlaying) {
         diceMesh.rotation.x += 0.005;
         diceMesh.rotation.y += 0.01;
-        
-        // Subtle floating effect (Y-axis bobbing)
-        diceMesh.position.y = Math.sin(Date.now() * 0.002) * 0.1;
+        diceMesh.position.y = Math.sin(Date.now()*0.002)*0.1;
     }
-
     d.re.render(d.sc, d.ca);
 }
-
-// Start Animation
 animateDice();
 
+console.log("✅ 3D Scenes Initialized Successfully!");    
+   
         /**
  * Main Entry Point for all games
  * @param {string} type - The game category (coin, dice, crash, etc.)
