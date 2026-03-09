@@ -426,52 +426,62 @@ c.sc.add(light1);
 const light2 = new THREE.AmbientLight(0xffffff, 0.5);
 c.sc.add(light2);
 
-            // Dice Engine
+            // Dice Engine Initialization
 const d = createScene('diceCanvas');
+const loader = new THREE.TextureLoader();
 
-// Dice materials (1 - 6 faces)
+// Dice Materials with high-quality settings
 const diceMaterials = [
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice1.png') }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice2.png') }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice3.png') }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice4.png') }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice5.png') }),
-    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice6.png') })
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice1.png'), roughness: 0.2, metalness: 0.1 }), // Front
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice2.png'), roughness: 0.2, metalness: 0.1 }), // Back
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice3.png'), roughness: 0.2, metalness: 0.1 }), // Top
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice4.png'), roughness: 0.2, metalness: 0.1 }), // Bottom
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice5.png'), roughness: 0.2, metalness: 0.1 }), // Left
+    new THREE.MeshStandardMaterial({ map: loader.load('assets/dice6.png'), roughness: 0.2, metalness: 0.1 })  // Right
 ];
 
-// Dice mesh
+// Dice Mesh - Using BoxGeometry with more segments for smoother appearance
 diceMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(2.2, 2.2, 2.2, 2, 2, 2),
+    new THREE.BoxGeometry(2.2, 2.2, 2.2, 4, 4, 4),
     diceMaterials
 );
 
-// Position
-diceMesh.position.set(0,0,0);
-
-// Scene add
+// Position & Shadow
+diceMesh.position.set(0, 0, 0);
+diceMesh.castShadow = true;
 d.sc.add(diceMesh);
 
-// Lighting
-const diceLight = new THREE.PointLight(0xffffff, 1.5);
-diceLight.position.set(5,6,5);
-d.sc.add(diceLight);
+// Enhanced Lighting for 3D depth
+const pointLight = new THREE.PointLight(0xffffff, 2);
+pointLight.position.set(5, 5, 5);
+d.sc.add(pointLight);
 
-const ambientLight = new THREE.AmbientLight(0xffffff,0.6);
-d.sc.add(ambientLight);
+const rimLight = new THREE.PointLight(0x6366f1, 1); // Subtle indigo glow from back
+rimLight.position.set(-5, -5, -5);
+d.sc.add(rimLight);
 
+const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+d.sc.add(ambient);
 
-// Animation loop
-function animateDice(){
+/**
+ * Animation loop for the Dice
+ */
+function animateDice() {
     requestAnimationFrame(animateDice);
 
-    if(!isPlaying){
-        diceMesh.rotation.x += 0.01;
+    if (!isPlaying) {
+        // Smooth idle rotation
+        diceMesh.rotation.x += 0.005;
         diceMesh.rotation.y += 0.01;
+        
+        // Subtle floating effect (Y-axis bobbing)
+        diceMesh.position.y = Math.sin(Date.now() * 0.002) * 0.1;
     }
 
     d.re.render(d.sc, d.ca);
 }
 
+// Start Animation
 animateDice();
 
         /**
