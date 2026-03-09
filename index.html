@@ -422,55 +422,150 @@ else if(type === 'battle') {
     }, 1500);
 }
         function startCrash(bet) {
-            document.getElementById('crashBtn').classList.add('hidden');
-            document.getElementById('cashoutBtn').classList.remove('hidden');
-            currentCrash = 1.0;
-            const limit = (Math.random() * 5 + 1.1).toFixed(2);
-            document.getElementById('rocket').innerText = "🚀"; // No fire while flying
 
-            crashInterval = setInterval(() => {
-                currentCrash += 0.04;
-                document.getElementById('crashMult').innerText = currentCrash.toFixed(2) + "x";
-                gsap.to("#rocket", { x: (currentCrash-1)*130, y: -(currentCrash-1)*50, duration: 0.1, ease: "linear" });
+    document.getElementById('crashBtn').classList.add('hidden');
+    document.getElementById('cashoutBtn').classList.remove('hidden');
 
-                if(currentCrash >= limit) {
-                    clearInterval(crashInterval);
-                    sounds.explosion.play();
-                    document.getElementById('rocket').innerText = "💥🔥"; // Fire only on crash
-                    setTimeout(() => {
-                        finalize(false, bet, 0);
-                        document.getElementById('crashBtn').classList.remove('hidden');
-                        document.getElementById('cashoutBtn').classList.add('hidden');
-                        gsap.set("#rocket", {x:0, y:0});
-                        document.getElementById('rocket').innerText = "🚀";
-                    }, 1200);
-                }
-            }, 100);
+    currentCrash = 1.0;
+
+    // random crash point
+    const limit = parseFloat((Math.random() * 5 + 1.1).toFixed(2));
+
+    document.getElementById('rocket').innerText = "🚀";
+
+    crashInterval = setInterval(() => {
+
+        currentCrash += 0.04;
+
+        document.getElementById('crashMult').innerText =
+        currentCrash.toFixed(2) + "x";
+
+        // rocket movement
+        gsap.to("#rocket", {
+            x: (currentCrash - 1) * 130,
+            y: -(currentCrash - 1) * 50,
+            duration: 0.1,
+            ease: "linear"
+        });
+
+        // crash check
+        if(currentCrash >= limit){
+
+            clearInterval(crashInterval);
+
+            sounds.explosion.play();
+
+            document.getElementById('rocket').innerText = "💥🔥";
+
+            setTimeout(()=>{
+
+                finalize(false, bet, 0);
+
+                document.getElementById('crashBtn').classList.remove('hidden');
+                document.getElementById('cashoutBtn').classList.add('hidden');
+
+                gsap.set("#rocket",{x:0,y:0});
+
+                document.getElementById('rocket').innerText = "🚀";
+
+                isPlaying = false;
+                updateUI();
+
+            },1200);
         }
+
+    },100);
+}
 
         function cashoutCrash() {
 
-    // stop crash timer
+    if(!isPlaying) return;
+
     clearInterval(crashInterval);
 
-    // show / hide buttons
     document.getElementById('crashBtn').classList.remove('hidden');
     document.getElementById('cashoutBtn').classList.add('hidden');
 
-    // payout
     finalize(true, currentBet, currentCrash);
 
-    // reset rocket position
-    gsap.set("#rocket", { x:0, y:0 });
+    gsap.set("#rocket",{x:0,y:0});
 
-    // reset crash multiplier
+    document.getElementById('rocket').innerText = "🚀";
+
     currentCrash = 1;
 
-    // game finished
     isPlaying = false;
 
     updateUI();
 }
+
+        function startSlots(bet){
+
+    // reset reels
+    gsap.set("#reel1, #reel2, #reel3", {y:0});
+
+    // random symbols
+    const res = [
+        Math.floor(Math.random()*6),
+        Math.floor(Math.random()*6),
+        Math.floor(Math.random()*6)
+    ];
+
+    // spin reels
+    [1,2,3].forEach((id,i)=>{
+
+        gsap.to(`#reel${id}`,{
+            y: -2400 - (res[i]*80),
+            duration: 2 + i,
+            ease: "power2.inOut",
+
+            onComplete: ()=>{
+
+                if(id === 3){
+
+                    const win =
+                        res[0] === res[1] &&
+                        res[1] === res[2];
+
+                    finalize(win, bet, 10);
+                }
+
+            }
+
+        });
+
+    });
+
+        }
+
+        function startBattle(bet){
+
+    document.getElementById("battleStatus").innerText =
+    "⚔️ Fighting...";
+
+    setTimeout(()=>{
+
+        const win = Math.random() > 0.5;
+
+        if(win){
+
+            document.getElementById("battleStatus").innerText =
+            "🏆 You Win!";
+
+            finalize(true, bet, 1.8);
+
+        }else{
+
+            document.getElementById("battleStatus").innerText =
+            "💀 You Lost!";
+
+            finalize(false, bet, 0);
+
+        }
+
+    },1500);
+
+        }
 
         function finalize(won, bet, mult) {
             isPlaying = false;
