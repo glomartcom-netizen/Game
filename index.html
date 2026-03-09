@@ -13,79 +13,193 @@
     import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'  
     import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'  
 
-    <script type="module">    
-        import { createAppKit } from 'https://esm.sh/@reown/appkit?bundle'    
-        import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'    
-        import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'    
-            
-        const projectId = '059cc242b0cc96ac9665c598b76ddc7b';    
-            
-        const modal = createAppKit({    
-          adapters: [new Ethers5Adapter()],    
-          networks: [bsc],    
-          metadata: {     
-            name: 'DimeX Pro',     
-            url: window.location.origin,     
-            icons: ['https://i.ibb.co/HpqwGFqt/logo.png']     
-          },    
-          projectId,    
-          features: { analytics: true }    
-        });    
-            
-        window.appKitModal = modal;    
-            
-        const syncWallet = async () => {  
-            const provider = modal.getWalletProvider();  
-            if (provider) {  
-                const accounts = await provider.request({ method: 'eth_accounts' });  
-                if (accounts.length > 0) {  
-                    const addr = accounts[0];  
-                    document.getElementById('connectBtn').innerText = addr.slice(0, 6) + "..." + addr.slice(-4);  
-                    // Demo balance boost for connected users  
-                    window.balance = 5000.00;  
-                    window.updateUI();  
-                }  
-            }  
-        };  
-  
-        window.syncWallet = syncWallet;  
-  
-        modal.subscribeState((state) => {    
-          if(state?.isConnected) syncWallet();    
-        });    
-            
-        window.addEventListener("load", () => {      
-            let retry = 0;      
-            const reconnect = setInterval(() => {      
-                if(modal.getWalletProvider()){      
-                    syncWallet();      
-                    clearInterval(reconnect);      
-                }      
-                if(++retry >= 10) clearInterval(reconnect);      
-            }, 1000);      
-        });      
-  
-        window.connectWallet = () => modal.open();  
+<script type="module">
+import { createAppKit } from 'https://esm.sh/@reown/appkit?bundle'
+import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5?bundle'
+import { bsc } from 'https://esm.sh/@reown/appkit/networks?bundle'
 
-<style>  
-    :root { --primary: #6366f1; --dark: #020617; }  
-    body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }  
-    .master-card { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 1.2rem; }  
-    .btn-master { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); font-weight: 800; transition: 0.3s; text-transform: uppercase; border-radius: 0.75rem; }  
-    .active-selection { border: 2px solid #6366f1 !important; background: rgba(99, 102, 241, 0.2) !important; }  
-    .reel-blur { filter: blur(6px); }  
-    .glow-active { text-shadow: 0 0 20px var(--primary); animation: pulse-glow 0.8s infinite; }  
-    @keyframes pulse-glow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }  
-    .shake-heavy { animation: shake 0.5s both; }  
-    @keyframes shake { 10%, 90% { transform: translate3d(-1px, 1px, 0); } 20%, 80% { transform: translate3d(2px, -2px, 0); } }  
-    #winOverlay { position: fixed; inset: 0; pointer-events: none; opacity: 0; z-index: 50; background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 70%); }  
-    .slot-window { display: flex; gap: 5px; justify-content: center; background: #000; padding: 10px; border-radius: 1rem; height: 100px; border: 1px solid #1e293b; overflow: hidden; }  
-    .reel-hd { width: 60px; height: 80px; overflow: hidden; position: relative; background: #0a0a0a; border-radius: 8px; }  
-    .symbol-hd { height: 80px; display: flex; align-items: center; justify-content: center; font-size: 2rem; }  
-    .game-screen { display: none; }  
-    .lobby-card:hover { transform: translateY(-5px); border-color: #6366f1; }  
+const projectId = '059cc242b0cc96ac9665c598b76ddc7b';
+
+const modal = createAppKit({
+  adapters: [new Ethers5Adapter()],
+  networks: [bsc],
+  metadata: { 
+    name: 'DimeX Pro', 
+    url: window.location.origin, 
+    icons: ['https://i.ibb.co/HpqwGFqt/logo.png'] 
+  },
+  projectId,
+  features: { analytics: true }
+});
+
+window.appKitModal = modal;
+
+const syncWallet = async () => {
+    const provider = modal.getWalletProvider();
+
+    if (provider) {
+
+        const accounts = await provider.request({
+            method: 'eth_accounts'
+        });
+
+        if (accounts.length > 0) {
+
+            const addr = accounts[0];
+
+            document.getElementById('connectBtn').innerText =
+                addr.slice(0, 6) + "..." + addr.slice(-4);
+
+            // demo balance for connected wallet
+            window.dmxBalance = 5000.00;
+
+            if(window.updateUI){
+                window.updateUI();
+            }
+
+        }
+    }
+};
+
+window.syncWallet = syncWallet;
+
+modal.subscribeState((state) => {
+
+    if (state?.isConnected) {
+        syncWallet();
+    }
+
+});
+
+window.addEventListener("load", () => {
+
+    let retry = 0;
+
+    const reconnect = setInterval(() => {
+
+        if (modal.getWalletProvider()) {
+
+            syncWallet();
+            clearInterval(reconnect);
+
+        }
+
+        retry++;
+
+        if (retry >= 10) {
+            clearInterval(reconnect);
+        }
+
+    }, 1000);
+
+});
+
+window.connectWallet = () => {
+    modal.open();
+};
+
+</script>
+<style>
+:root { --primary: #6366f1; --dark: #020617; }
+
+body {
+ background: var(--dark);
+ color: white;
+ font-family: 'Inter', sans-serif;
+ height: 100vh;
+ overflow: hidden;
+}
+
+.master-card {
+ background: rgba(15, 23, 42, 0.9);
+ backdrop-filter: blur(20px);
+ border: 1px solid rgba(255,255,255,0.05);
+ border-radius: 1.2rem;
+}
+
+.btn-master {
+ background: linear-gradient(135deg,#6366f1 0%,#a855f7 100%);
+ font-weight:800;
+ transition:0.3s;
+ text-transform:uppercase;
+ border-radius:0.75rem;
+}
+
+.active-selection{
+ border:2px solid #6366f1!important;
+ background:rgba(99,102,241,0.2)!important;
+}
+
+.reel-blur{
+ filter:blur(6px);
+}
+
+.glow-active{
+ text-shadow:0 0 20px var(--primary);
+ animation:pulse-glow 0.8s infinite;
+}
+
+@keyframes pulse-glow{
+ 0%,100%{transform:scale(1);}
+ 50%{transform:scale(1.05);}
+}
+
+.shake-heavy{
+ animation:shake 0.5s both;
+}
+
+@keyframes shake{
+ 10%,90%{transform:translate3d(-1px,1px,0);}
+ 20%,80%{transform:translate3d(2px,-2px,0);}
+}
+
+#winOverlay{
+ position:fixed;
+ inset:0;
+ pointer-events:none;
+ opacity:0;
+ z-index:50;
+ background:radial-gradient(circle,rgba(245,158,11,0.3)0%,transparent 70%);
+}
+
+.slot-window{
+ display:flex;
+ gap:5px;
+ justify-content:center;
+ background:#000;
+ padding:10px;
+ border-radius:1rem;
+ height:100px;
+ border:1px solid #1e293b;
+ overflow:hidden;
+}
+
+.reel-hd{
+ width:60px;
+ height:80px;
+ overflow:hidden;
+ position:relative;
+ background:#0a0a0a;
+ border-radius:8px;
+}
+
+.symbol-hd{
+ height:80px;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ font-size:2rem;
+}
+
+.game-screen{
+ display:none;
+}
+
+.lobby-card:hover{
+ transform:translateY(-5px);
+ border-color:#6366f1;
+}
 </style>
-
 </head>  
 <body id="mainBody" class="p-2 md:p-4">  
     <div id="winOverlay"></div>  <header class="max-w-7xl mx-auto mb-4 flex justify-between items-center">  
